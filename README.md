@@ -1,75 +1,186 @@
-# React + TypeScript + Vite
+# AI Recipe App 環境構築手順書
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+学校のチーム開発課題で `airecipe_app` を動かすための手順です。  
+基本的には、リポジトリをクローンして `.env` を作成し、必要なパッケージを入れれば起動できます。
 
-Currently, two official plugins are available:
+## 対象環境
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- Windows
+- PowerShell
+- GitHub アカウント
+- Git
+- GitHub CLI
+- Node.js / npm
 
-## React Compiler
+Git が入っていない場合は、先にインストールしてください。
 
-The React Compiler is enabled on this template. See [this documentation](https://react.dev/learn/react-compiler) for more information.
-
-Note: This will impact Vite dev & build performances.
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```powershell
+winget install --id Git.Git
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+インストール後、PowerShell を開き直して、次のコマンドで確認します。
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```powershell
+git --version
 ```
+
+Node.js が入っていない場合も、先にインストールしてください。
+
+```powershell
+winget install --id OpenJS.NodeJS.LTS
+```
+
+インストール後、PowerShell を開き直して、次のコマンドで確認します。
+
+```powershell
+node -v
+npm -v
+```
+
+## 1. GitHub CLI をインストールする
+
+```powershell
+winget install --id GitHub.cli
+```
+
+インストール後、PowerShell を開き直して、次のコマンドで確認します。
+
+```powershell
+gh --version
+```
+
+## 2. GitHub にログインする
+
+```powershell
+gh auth login
+```
+
+質問が出たら、次のように選択します。
+
+```text
+GitHub.com
+HTTPS
+Yes
+Login with a web browser
+```
+
+ブラウザが開いたら、画面の案内に従って GitHub にログインしてください。
+
+## 3. プロジェクトをクローンする
+
+作業用のフォルダに移動してから、次のコマンドを実行します。
+
+```powershell
+gh repo clone kikiririkakabubuoobabakeke/airecipe_app
+```
+
+または、次のコマンドでもクローンできます。
+
+```powershell
+git clone https://github.com/kikiririkakabubuoobabakeke/airecipe_app.git
+```
+
+クローンできたら、プロジェクトフォルダに移動します。
+
+```powershell
+cd airecipe_app
+```
+
+## 4. `.env` ファイルを作成する
+
+プロジェクトフォルダの直下に `.env` ファイルを作成します。
+
+`.env` には次の内容を保存してください。
+
+```env
+VITE_SUPABASE_URL=URL
+VITE_SUPABASE_PUBLISHABLE_KEY=APIkey
+```
+
+`.env` は各自のPCで作成するファイルです。GitHub にはアップロードしません。
+
+## 5. Groq API キーを取得する
+
+Groq API については、各自で Groq にアクセスし、自分の Google アカウントで登録して API キーを取得してください。
+
+## 6. 必要なパッケージをインストールする
+
+```powershell
+npm install
+```
+
+## 7. 開発サーバーを起動する
+
+```powershell
+npm run dev
+```
+
+起動後、PowerShell に表示されたURLをブラウザで開きます。通常は次のようなURLです。
+
+```text
+http://localhost:5173/
+```
+
+## 8. 開発を始める前に最新版を取得する
+
+作業を始める前に、他のメンバーの変更を取り込みます。
+
+```powershell
+git pull
+```
+
+変更したファイルを確認したいときは、次のコマンドを使います。
+
+```powershell
+git status
+```
+
+## よくあるエラー
+
+### `gh` が認識されない
+
+PowerShell を開き直してください。直らない場合は、GitHub CLI が正しくインストールされているか確認します。
+
+```powershell
+gh --version
+```
+
+### `npm` が認識されない
+
+Node.js が入っていない可能性があります。Node.js をインストールしてから PowerShell を開き直してください。
+
+```powershell
+winget install --id OpenJS.NodeJS.LTS
+```
+
+### Supabase に接続できない
+
+`.env` のファイル名と内容を確認してください。
+
+- ファイル名が `.env` になっている
+- プロジェクトフォルダの直下に置いている
+- `VITE_SUPABASE_URL` と `VITE_SUPABASE_PUBLISHABLE_KEY` の値に余分な空白がない
+- `.env` を作成した後に `npm run dev` を起動し直している
+
+## 初回作成者向けメモ
+
+このプロジェクトを最初に作成するときは、次のコマンドで Vite プロジェクトを作成しました。
+
+```powershell
+npm create vite@latest airecipe_app
+```
+
+選択肢は次のとおりです。
+
+```text
+Select a framework:
+React
+
+Select a variant:
+TypeScript + React Compiler
+
+Install with npm and start now?
+Yes
+```
+
+すでに GitHub からクローンする場合、この手順は実行しなくて大丈夫です。
