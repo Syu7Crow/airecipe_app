@@ -190,7 +190,7 @@ function App() {
           </button>
           <button type="button" className="account-button">
             <Icon name="user" />
-            <span>ああああああああ</span>
+            <span>アカウント設定</span>
           </button>
         </div>
       </header>
