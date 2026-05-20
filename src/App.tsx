@@ -1,3 +1,5 @@
+import { useEffect, useState } from 'react'
+import { checkSupabaseConnection } from './lib/supabase'
 import './App.css'
 
 type Feature = {
@@ -164,6 +166,22 @@ function FeatureCard({ feature }: { feature: Feature }) {
 }
 
 function App() {
+  const [supabaseStatus, setSupabaseStatus] = useState('Supabase確認中')
+
+  useEffect(() => {
+    let isMounted = true
+
+    checkSupabaseConnection().then((status) => {
+      if (isMounted) {
+        setSupabaseStatus(status.message)
+      }
+    })
+
+    return () => {
+      isMounted = false
+    }
+  }, [])
+
   return (
     <div className="app-shell">
       <header className="topbar">
@@ -184,6 +202,7 @@ function App() {
         </nav>
 
         <div className="topbar__actions">
+          <span className="connection-status">{supabaseStatus}</span>
           <button type="button" className="icon-button" aria-label="通知">
             <Icon name="bell" />
           </button>
@@ -201,7 +220,7 @@ function App() {
             <h1 id="home-title">
               作れるレシピを
               <br />
-              在庫からすぐ提案
+              食材からすぐ提案
             </h1>
             <p className="hero-panel__lead">
               食材登録、期限管理、レシピ生成、買い物リストまでをひとつの画面から始められます。

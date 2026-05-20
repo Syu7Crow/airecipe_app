@@ -92,8 +92,23 @@
 
 .topbar__actions {
   display: flex;
+  align-items: center;
   justify-content: flex-end;
   gap: 10px;
+}
+
+.connection-status {
+  display: inline-flex;
+  min-height: 34px;
+  align-items: center;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--muted);
+  background: var(--surface);
+  font-size: 12px;
+  font-weight: 800;
+  white-space: nowrap;
 }
 
 button {
@@ -596,6 +611,7 @@ a:focus-visible {
   }
 
   .brand small,
+  .connection-status,
   .account-button span,
   .hide-on-small {
     display: none;
