@@ -1,6 +1,8 @@
 import './env.js'
 
 const groqApiKey = process.env.GROQ_API_KEY
+export const defaultGroqModel =
+  process.env.GROQ_MODEL ?? 'llama-3.3-70b-versatile'
 const groqBaseUrl = 'https://api.groq.com/openai/v1'
 
 export const isGroqConfigured = Boolean(groqApiKey)

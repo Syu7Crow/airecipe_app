@@ -96,6 +96,7 @@ cd airecipe_app
 SUPABASE_URL=URL
 SUPABASE_PUBLISHABLE_KEY=APIkey
 GROQ_API_KEY=APIkey
+GROQ_MODEL=llama-3.3-70b-versatile
 ```
 
 `.env` は各自のPCで作成するファイルです。GitHub にはアップロードしません。

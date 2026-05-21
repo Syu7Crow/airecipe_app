@@ -1,4 +1,5 @@
 import './lib/supabase'
+import './lib/groq'
 import './App.css'
 
 type Feature = {

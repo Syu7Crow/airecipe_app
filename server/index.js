@@ -2,6 +2,7 @@ import { createServer } from 'node:http'
 import {
   checkGroqConnection,
   createGroqChatCompletion,
+  defaultGroqModel,
 } from './groq.js'
 import { checkSupabaseConnection } from './supabase.js'
 
@@ -78,16 +79,16 @@ async function handleGroqChat(request, response) {
   try {
     const body = await readJsonBody(request)
 
-    if (!body?.model || !Array.isArray(body?.messages)) {
+    if (!Array.isArray(body?.messages)) {
       sendJson(response, 400, {
         ok: false,
-        message: 'model and messages are required',
+        message: 'messages are required',
       })
       return
     }
 
     const completion = await createGroqChatCompletion({
-      model: body.model,
+      model: body.model ?? defaultGroqModel,
       messages: body.messages,
       temperature: body.temperature,
       max_tokens: body.max_tokens,
