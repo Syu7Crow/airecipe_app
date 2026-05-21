@@ -1,44 +1,31 @@
-import { createClient } from '@supabase/supabase-js'
-
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string | undefined
-const supabasePublishableKey = import.meta.env
-  .VITE_SUPABASE_PUBLISHABLE_KEY as string | undefined
-
-export const isSupabaseConfigured = Boolean(
-  supabaseUrl && supabasePublishableKey,
-)
-
-export const supabase =
-  supabaseUrl && supabasePublishableKey
-    ? createClient(supabaseUrl, supabasePublishableKey)
-  : null
-
 type SupabaseStatus = {
   ok: boolean
+  configured: boolean
   message: string
 }
 
-export function checkSupabaseConnection(): SupabaseStatus {
-  if (!supabase || !supabaseUrl || !supabasePublishableKey) {
-    return {
-      ok: false,
-      message: 'Supabase未設定',
-    }
-  }
-
+export async function checkSupabaseConnection(): Promise<SupabaseStatus> {
   try {
-    new URL(supabaseUrl)
+    const response = await fetch('/api/supabase/status')
+
+    if (!response.ok) {
+      return {
+        ok: false,
+        configured: false,
+        message: 'Supabase status API failed',
+      }
+    }
+
+    return (await response.json()) as SupabaseStatus
   } catch {
     return {
       ok: false,
-      message: 'Supabase URL確認',
+      configured: false,
+      message: 'Supabase server is not reachable',
     }
-  }
-
-  return {
-    ok: true,
-    message: 'Supabase設定済み',
   }
 }
 
-console.info(`[あいくっく] ${checkSupabaseConnection().message}`)
+void checkSupabaseConnection().then((status) => {
+  console.info(`[あいくっく] ${status.message}`)
+})

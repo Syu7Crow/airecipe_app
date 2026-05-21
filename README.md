@@ -93,8 +93,9 @@ cd airecipe_app
 `.env` には次の内容を保存してください。
 
 ```env
-VITE_SUPABASE_URL=URL
-VITE_SUPABASE_PUBLISHABLE_KEY=APIkey
+SUPABASE_URL=URL
+SUPABASE_PUBLISHABLE_KEY=APIkey
+GROQ_API_KEY=APIkey
 ```
 
 `.env` は各自のPCで作成するファイルです。GitHub にはアップロードしません。
@@ -102,6 +103,7 @@ VITE_SUPABASE_PUBLISHABLE_KEY=APIkey
 ## 5. Groq API キーを取得する
 
 Groq API については、各自で Groq にアクセスし、自分の Google アカウントで登録して API キーを取得してください。
+取得した API キーは `.env` の `GROQ_API_KEY` に保存してください。この値はサーバー側だけで読み込まれ、ブラウザ側には公開しません。
 
 ## 6. 必要なパッケージをインストールする
 
@@ -159,7 +161,7 @@ winget install --id OpenJS.NodeJS.LTS
 
 - ファイル名が `.env` になっている
 - プロジェクトフォルダの直下に置いている
-- `VITE_SUPABASE_URL` と `VITE_SUPABASE_PUBLISHABLE_KEY` の値に余分な空白がない
+- `SUPABASE_URL` と `SUPABASE_PUBLISHABLE_KEY` の値に余分な空白がない
 - `.env` を作成した後に `npm run dev` を起動し直している
 
 ## 初回作成者向けメモ
