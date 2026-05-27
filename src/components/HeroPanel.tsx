@@ -1,6 +1,14 @@
 import { Icon } from './Icon'
 
-export function HeroPanel() {
+type HeroPanelProps = {
+  isGenerating: boolean
+  onGenerateRecipe: () => void
+}
+
+export function HeroPanel({
+  isGenerating,
+  onGenerateRecipe,
+}: HeroPanelProps) {
   return (
     <section className="hero-panel" aria-labelledby="home-title">
       <div className="hero-panel__content">
@@ -14,9 +22,14 @@ export function HeroPanel() {
           食材登録、期限管理、レシピ生成、買い物リストまでをひとつの画面から始められます。
         </p>
         <div className="hero-actions">
-          <button type="button" className="primary-button">
+          <button
+            type="button"
+            className="primary-button"
+            onClick={onGenerateRecipe}
+            disabled={isGenerating}
+          >
             <Icon name="spark" />
-            <span>レシピを生成</span>
+            <span>{isGenerating ? '生成中...' : 'レシピを生成'}</span>
           </button>
           <button type="button" className="secondary-button">
             <Icon name="plus" />

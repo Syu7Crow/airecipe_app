@@ -4,6 +4,11 @@ import {
   createGroqChatCompletion,
   defaultGroqModel,
 } from './groq.js'
+import {
+  generateAndSaveRecipes,
+  getInventoryForUser,
+  markRecipeCooked,
+} from './recipes.js'
 import { checkSupabaseConnection } from './supabase.js'
 import pg from 'pg'
 const { Pool } = pg
@@ -131,6 +136,11 @@ const server = createServer((request, response) => {
     return
   }
 
+  if (request.method === 'GET' && url.pathname === '/api/inventory') {
+    handleInventory(url, response)
+    return
+  }
+
   if (request.method === 'POST' && url.pathname === '/api/groq/chat') {
     handleGroqChat(request, response)
     return
@@ -138,6 +148,16 @@ const server = createServer((request, response) => {
 
   if (request.method === 'GET' && url.pathname === '/api/fridge') {
     handleGetFridge(request, response)
+    return
+  }
+
+  if (request.method === 'POST' && url.pathname === '/api/recipes/generate') {
+    handleRecipeGeneration(request, response)
+    return
+  }
+
+  if (request.method === 'POST' && url.pathname === '/api/recipes/cooked') {
+    handleRecipeCooked(request, response)
     return
   }
 
@@ -276,6 +296,64 @@ async function handleGetFridge(request, response) {
   } catch (error) {
     console.error('[node] Database query failed, returning mock data:', error)
     sendJson(response, 200, getMockData())
+  }
+}
+
+async function handleInventory(url, response) {
+  try {
+    const inventory = await getInventoryForUser(url.searchParams.get('userId'))
+    sendJson(response, 200, {
+      ok: true,
+      ...inventory,
+    })
+  } catch (error) {
+    sendJson(response, 500, {
+      ok: false,
+      message:
+        error instanceof Error ? error.message : 'Inventory request failed',
+    })
+  }
+}
+
+async function handleRecipeGeneration(request, response) {
+  try {
+    const body = await readJsonBody(request)
+    const result = await generateAndSaveRecipes({
+      userId: body?.userId,
+      servings: body?.servings,
+    })
+
+    sendJson(response, 200, {
+      ok: true,
+      ...result,
+    })
+  } catch (error) {
+    sendJson(response, 500, {
+      ok: false,
+      message:
+        error instanceof Error ? error.message : 'Recipe generation failed',
+    })
+  }
+}
+
+async function handleRecipeCooked(request, response) {
+  try {
+    const body = await readJsonBody(request)
+    const result = await markRecipeCooked({
+      recipeId: body?.recipeId,
+      servings: body?.servings,
+      userId: body?.userId,
+    })
+
+    sendJson(response, 200, {
+      ok: true,
+      ...result,
+    })
+  } catch (error) {
+    sendJson(response, 500, {
+      ok: false,
+      message: error instanceof Error ? error.message : 'Cooking failed',
+    })
   }
 }
 

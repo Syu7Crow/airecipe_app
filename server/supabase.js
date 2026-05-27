@@ -3,13 +3,16 @@ import { createClient } from '@supabase/supabase-js'
 
 const supabaseUrl = process.env.SUPABASE_URL
 const supabasePublishableKey = process.env.SUPABASE_PUBLISHABLE_KEY
+const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+const supabaseKey = supabaseServiceRoleKey ?? supabasePublishableKey
 
+export const isSupabaseServiceRoleConfigured = Boolean(supabaseServiceRoleKey)
 export const isSupabaseConfigured = Boolean(
-  supabaseUrl && supabasePublishableKey,
+  supabaseUrl && supabaseKey,
 )
 
 export const supabase = isSupabaseConfigured
-  ? createClient(supabaseUrl, supabasePublishableKey, {
+  ? createClient(supabaseUrl, supabaseKey, {
       auth: {
         autoRefreshToken: false,
         persistSession: false,
@@ -18,7 +21,7 @@ export const supabase = isSupabaseConfigured
   : null
 
 export function checkSupabaseConnection() {
-  if (!supabase || !supabaseUrl || !supabasePublishableKey) {
+  if (!supabase || !supabaseUrl || !supabaseKey) {
     return {
       ok: false,
       configured: false,
@@ -39,6 +42,9 @@ export function checkSupabaseConnection() {
   return {
     ok: true,
     configured: true,
-    message: 'Supabase is configured on the server',
+    serviceRole: Boolean(supabaseServiceRoleKey),
+    message: supabaseServiceRoleKey
+      ? 'Supabase is configured on the server with service role'
+      : 'Supabase is configured on the server, but service role is missing',
   }
 }

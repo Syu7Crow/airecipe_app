@@ -31,7 +31,6 @@ export async function testGroqConnection(prompt: string) {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'llama-3.3-70b-versatile',
         messages: [
           {
             role: 'user',
