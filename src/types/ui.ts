@@ -50,6 +50,7 @@ export type Recipe = {
   servings?: number
   difficulty?: string
   reason?: string
+  cookProcess?: string
   steps?: string[]
   ingredients?: RecipeIngredientAmount[]
 }

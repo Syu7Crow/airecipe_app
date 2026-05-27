@@ -2,10 +2,15 @@ import type { Recipe } from '../types/ui'
 
 type RecipesPanelProps = {
   recipes: Recipe[]
+  onSelectRecipe?: (recipe: Recipe) => void
   onCookRecipe?: (recipe: Recipe) => void
 }
 
-export function RecipesPanel({ recipes, onCookRecipe }: RecipesPanelProps) {
+export function RecipesPanel({
+  recipes,
+  onSelectRecipe,
+  onCookRecipe,
+}: RecipesPanelProps) {
   return (
     <section className="panel" id="recipes" aria-labelledby="recipes-title">
       <div className="section-heading">
@@ -19,14 +24,21 @@ export function RecipesPanel({ recipes, onCookRecipe }: RecipesPanelProps) {
       </div>
       <div className="recipe-stack">
         {recipes.map((recipe) => (
-          <article key={recipe.name} className="recipe-card">
+          <article
+            key={recipe.name}
+            className="recipe-card"
+            onClick={() => onSelectRecipe?.(recipe)}
+          >
             <div className="recipe-card__header">
               <h3>{recipe.name}</h3>
               {recipe.recipeId && onCookRecipe ? (
                 <button
                   type="button"
                   className="small-button"
-                  onClick={() => onCookRecipe(recipe)}
+                  onClick={(event) => {
+                    event.stopPropagation()
+                    onCookRecipe(recipe)
+                  }}
                 >
                   調理済み
                 </button>

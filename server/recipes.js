@@ -225,6 +225,8 @@ function buildCookProcess(recipe) {
 }
 
 function mapSavedRecipe(recipe, savedRecipe, savedIngredients) {
+  const cookProcess = buildCookProcess(recipe)
+
   return {
     recipeId: savedRecipe.recipe_id,
     name: savedRecipe.name,
@@ -232,6 +234,7 @@ function mapSavedRecipe(recipe, savedRecipe, savedIngredients) {
     servings: 1,
     difficulty: recipe.difficulty,
     reason: recipe.reason,
+    cookProcess,
     steps: recipe.steps,
     tags: recipe.tags,
     meta: `${savedRecipe.cook_time ?? recipe.cookTime}分 / ${recipe.difficulty}`,

@@ -45,7 +45,12 @@ function buildSummaryItems(ingredients: Ingredient[], recipes: Recipe[]) {
   ]
 }
 
-export function HomePage({ onNavigate }: { onNavigate?: (page: 'home' | 'fridge') => void }) {
+type HomePageProps = {
+  onNavigate?: (page: 'home' | 'fridge') => void
+  onSelectRecipe?: (recipe: Recipe) => void
+}
+
+export function HomePage({ onNavigate, onSelectRecipe }: HomePageProps) {
   const [ingredients, setIngredients] =
     useState<Ingredient[]>(expiringIngredients)
   const [recipes, setRecipes] = useState<Recipe[]>(suggestedRecipes)
@@ -151,7 +156,11 @@ export function HomePage({ onNavigate }: { onNavigate?: (page: 'home' | 'fridge'
 
         <div className="dashboard-grid">
           <IngredientsPanel ingredients={ingredients} />
-          <RecipesPanel recipes={recipes} onCookRecipe={openCookedDialog} />
+          <RecipesPanel
+            recipes={recipes}
+            onSelectRecipe={onSelectRecipe}
+            onCookRecipe={openCookedDialog}
+          />
         </div>
 
         <section

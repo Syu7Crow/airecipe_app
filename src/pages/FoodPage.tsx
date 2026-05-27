@@ -18,7 +18,7 @@ export function FoodPage() {
       <Topbar />
 
       <main className="home">
-        <HeroPanel />
+        <HeroPanel isGenerating={false} onGenerateRecipe={() => undefined} />
 
         <SummaryGrid items={summaryItems} />
 
