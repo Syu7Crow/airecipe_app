@@ -32,6 +32,29 @@ export function ReceiptScanPage({ onNavigate }: ReceiptScanPageProps) {
   const [isParsing, setIsParsing] = useState(false)
   const [isImporting, setIsImporting] = useState(false)
 
+  async function parseOcrText(text: string, successMessage: string) {
+    if (!text.trim()) {
+      setErrorMessage('OCR結果が空です')
+      return
+    }
+
+    setIsParsing(true)
+    setStatusMessage('AIで登録候補を整形しています...')
+    setErrorMessage('')
+
+    try {
+      const result = await parseReceiptText(text)
+      setCandidates(normalizeCandidates(result.items))
+      setStatusMessage(successMessage)
+    } catch (error) {
+      console.error('[vite] Receipt parse failed:', error)
+      setErrorMessage('登録候補の作成に失敗しました')
+      setStatusMessage('')
+    } finally {
+      setIsParsing(false)
+    }
+  }
+
   async function handleFileChange(file: File | null) {
     if (!file) {
       return
@@ -52,7 +75,11 @@ export function ReceiptScanPage({ onNavigate }: ReceiptScanPageProps) {
         setProgressLabel(status)
       })
       setOcrText(text)
-      setStatusMessage('文字を読み取りました。内容をAIで整形できます。')
+      setIsReading(false)
+      await parseOcrText(
+        text,
+        '登録候補を自動作成しました。必要に応じて修正してください。',
+      )
     } catch (error) {
       console.error('[vite] Receipt OCR failed:', error)
       setErrorMessage('レシート画像の読み取りに失敗しました')
@@ -62,25 +89,10 @@ export function ReceiptScanPage({ onNavigate }: ReceiptScanPageProps) {
   }
 
   async function handleParseText() {
-    if (!ocrText.trim()) {
-      setErrorMessage('OCR結果が空です')
-      return
-    }
-
-    setIsParsing(true)
-    setStatusMessage('')
-    setErrorMessage('')
-
-    try {
-      const result = await parseReceiptText(ocrText)
-      setCandidates(normalizeCandidates(result.items))
-      setStatusMessage('登録候補を作成しました。必要に応じて修正してください。')
-    } catch (error) {
-      console.error('[vite] Receipt parse failed:', error)
-      setErrorMessage('登録候補の作成に失敗しました')
-    } finally {
-      setIsParsing(false)
-    }
+    await parseOcrText(
+      ocrText,
+      '登録候補を再作成しました。必要に応じて修正してください。',
+    )
   }
 
   function updateCandidate(
@@ -185,7 +197,7 @@ export function ReceiptScanPage({ onNavigate }: ReceiptScanPageProps) {
                 onClick={handleParseText}
                 disabled={isReading || isParsing || !ocrText.trim()}
               >
-                {isParsing ? '整形中...' : 'AIで整形'}
+                {isParsing ? '整形中...' : 'AIで再整形'}
               </button>
             </div>
 
