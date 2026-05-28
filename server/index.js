@@ -141,42 +141,42 @@ export async function handleApiRequest(request, response) {
   }
 
   if (request.method === 'GET' && url.pathname === '/api/inventory') {
-    handleInventory(url, response)
+    await handleInventory(url, response)
     return
   }
 
   if (request.method === 'GET' && url.pathname === '/api/cooking-history') {
-    handleCookingHistory(url, response)
+    await handleCookingHistory(url, response)
     return
   }
 
   if (request.method === 'GET' && url.pathname === '/api/recipes/saved') {
-    handleSavedRecipes(url, response)
+    await handleSavedRecipes(url, response)
     return
   }
 
   if (request.method === 'POST' && url.pathname === '/api/groq/chat') {
-    handleGroqChat(request, response)
+    await handleGroqChat(request, response)
     return
   }
 
   if (request.method === 'GET' && url.pathname === '/api/fridge') {
-    handleGetFridge(request, response)
+    await handleGetFridge(request, response)
     return
   }
 
   if (request.method === 'POST' && url.pathname === '/api/recipes/generate') {
-    handleRecipeGeneration(request, response)
+    await handleRecipeGeneration(request, response)
     return
   }
 
   if (request.method === 'POST' && url.pathname === '/api/recipes/cooked') {
-    handleRecipeCooked(request, response)
+    await handleRecipeCooked(request, response)
     return
   }
 
   if (request.method === 'POST' && url.pathname === '/api/recipes/favorite') {
-    handleRecipeFavorite(request, response)
+    await handleRecipeFavorite(request, response)
     return
   }
 
