@@ -49,16 +49,13 @@ export function Topbar({
           レシピ
         </a>
         <a
-          href="#shopping"
+          href="#receipt"
           onClick={(e) => {
             e.preventDefault()
-            onNavigate?.('home')
-            setTimeout(() => {
-              document.getElementById('shopping')?.scrollIntoView({ behavior: 'smooth' })
-            }, 100)
+            onNavigate?.('receipt')
           }}
         >
-          買い物
+          レシート
         </a>
         <a
           href="#history"
