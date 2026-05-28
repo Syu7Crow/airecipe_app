@@ -1,0 +1,47 @@
+import { handleApiRequest } from './index.js'
+
+export async function handleVercelRequest(request) {
+  const requestUrl = new URL(request.url)
+  const headers = Object.fromEntries(request.headers.entries())
+  headers.host ??= requestUrl.host
+
+  const bodyText =
+    request.method === 'GET' || request.method === 'HEAD'
+      ? ''
+      : await request.text()
+
+  const nodeRequest = {
+    method: request.method,
+    url: `${requestUrl.pathname}${requestUrl.search}`,
+    headers,
+    async *[Symbol.asyncIterator]() {
+      if (bodyText) {
+        yield Buffer.from(bodyText)
+      }
+    },
+  }
+
+  let status = 200
+  let responseHeaders = {}
+  let responseBody = ''
+
+  const nodeResponse = {
+    writeHead(statusCode, headersToWrite = {}) {
+      status = statusCode
+      responseHeaders = {
+        ...responseHeaders,
+        ...headersToWrite,
+      }
+    },
+    end(body = '') {
+      responseBody = body
+    },
+  }
+
+  await handleApiRequest(nodeRequest, nodeResponse)
+
+  return new Response(responseBody, {
+    status,
+    headers: responseHeaders,
+  })
+}
