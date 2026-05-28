@@ -136,6 +136,7 @@ export function HomePage({ onNavigate, onSelectRecipe }: HomePageProps) {
         <HeroPanel
           isGenerating={isGenerating}
           onGenerateRecipe={handleGenerateRecipe}
+          onShowRecipes={() => onNavigate?.('history')}
         />
 
         {statusMessage ? (
