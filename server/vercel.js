@@ -2,6 +2,13 @@ import { handleApiRequest } from './index.js'
 
 export async function handleVercelRequest(request) {
   const requestUrl = new URL(request.url)
+  const rewrittenApiPath = requestUrl.searchParams.get('path')
+
+  if (requestUrl.pathname === '/api/index.js' && rewrittenApiPath) {
+    requestUrl.pathname = `/api/${rewrittenApiPath}`
+    requestUrl.searchParams.delete('path')
+  }
+
   const headers = Object.fromEntries(request.headers.entries())
   headers.host ??= requestUrl.host
 
