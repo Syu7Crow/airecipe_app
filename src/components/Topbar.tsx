@@ -7,7 +7,7 @@ type TopbarProps = {
   onLogout?: () => void | Promise<void>
 }
 
-export function Topbar({ onNavigate }: TopbarProps) {
+export function Topbar({ onNavigate, onLogout }: TopbarProps) {
   const { t } = useI18n()
 
   return (
@@ -90,6 +90,16 @@ export function Topbar({ onNavigate }: TopbarProps) {
           <Icon name="settings" />
           <span>{t('topbar.settings')}</span>
         </button>
+        {onLogout ? (
+          <button
+            type="button"
+            className="account-button"
+            onClick={() => void onLogout()}
+          >
+            <Icon name="user" />
+            <span>{t('common.logout')}</span>
+          </button>
+        ) : null}
       </div>
     </header>
   )

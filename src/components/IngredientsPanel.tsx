@@ -29,7 +29,7 @@ export function IngredientsPanel({
   onAddIngredient?: () => void
 }) {
   const { t } = useI18n()
-  const visibleIngredients = ingredients
+  const visibleIngredients = [...ingredients]
     .filter((ingredient) => {
       const daysUntilExpiration = getDaysUntilExpiration(ingredient)
 
@@ -39,7 +39,7 @@ export function IngredientsPanel({
         daysUntilExpiration <= visibleExpirationDays
       )
     })
-    .toSorted((left, right) => {
+    .sort((left, right) => {
       const leftDays = getDaysUntilExpiration(left) ?? Number.MAX_SAFE_INTEGER
       const rightDays = getDaysUntilExpiration(right) ?? Number.MAX_SAFE_INTEGER
 

@@ -41,6 +41,16 @@ const authVerifierClient =
       })
     : null
 
+const authAdminClient =
+  supabaseUrl && supabaseServiceRoleKey
+    ? createClient(supabaseUrl, supabaseServiceRoleKey, {
+        auth: {
+          autoRefreshToken: false,
+          persistSession: false,
+        },
+      })
+    : null
+
 function requireAuthClient() {
   if (!authClient) {
     throw new Error('Supabase auth is not configured')
@@ -57,6 +67,14 @@ function requireAuthVerifierClient() {
   return authVerifierClient
 }
 
+function requireAuthAdminClient() {
+  if (!authAdminClient) {
+    throw new Error('SUPABASE_SERVICE_ROLE_KEY is required for user sync')
+  }
+
+  return authAdminClient
+}
+
 function normalizeUser(user) {
   if (!user) {
     return null
@@ -66,6 +84,37 @@ function normalizeUser(user) {
     id: user.id,
     email: user.email,
   }
+}
+
+function getFallbackEmail(userId) {
+  return `user-${userId}@aicook.local`
+}
+
+async function ensurePublicUser(user) {
+  if (!user?.id) {
+    return null
+  }
+
+  const client = requireAuthAdminClient()
+  const userMail = user.email || getFallbackEmail(user.id)
+  const { error } = await client
+    .from('users')
+    .upsert(
+      {
+        user_id: user.id,
+        user_mail: userMail,
+        user_name: user.email?.split('@')[0] ?? 'ユーザー',
+      },
+      {
+        onConflict: 'user_id',
+      },
+    )
+
+  if (error) {
+    throw new Error(`Failed to sync public user: ${error.message}`)
+  }
+
+  return user
 }
 
 function normalizeSession(session) {
@@ -113,8 +162,10 @@ export async function signInWithPassword({ email, password }) {
     throw new Error(error.message)
   }
 
+  const user = await ensurePublicUser(normalizeUser(data.user))
+
   return {
-    user: normalizeUser(data.user),
+    user,
     session: normalizeSession(data.session),
     expiresAt: data.session?.expires_at ?? null,
   }
@@ -132,8 +183,10 @@ export async function signUpWithPassword({ email, password }) {
     throw new Error(error.message)
   }
 
+  const user = await ensurePublicUser(normalizeUser(data.user))
+
   return {
-    user: normalizeUser(data.user),
+    user,
     session: normalizeSession(data.session),
     needsEmailConfirmation: !data.session,
   }
@@ -179,7 +232,7 @@ export async function createSessionFromTokens({ accessToken, refreshToken }) {
     throw new Error('accessToken and refreshToken are required')
   }
 
-  const user = await getUserFromAccessToken(accessToken)
+  const user = await ensurePublicUser(await getUserFromAccessToken(accessToken))
   const payload = decodeJwtPayload(accessToken)
   const timeNow = Math.floor(Date.now() / 1000)
   const expiresAt = Number.isFinite(payload.exp) ? payload.exp : null
@@ -194,6 +247,69 @@ export async function createSessionFromTokens({ accessToken, refreshToken }) {
       expiresIn,
     },
     expiresAt,
+  }
+}
+
+export async function refreshSessionFromRefreshToken(refreshToken) {
+  if (!refreshToken) {
+    throw new Error('refresh token is required')
+  }
+
+  const client = requireAuthClient()
+  const { data, error } = await client.auth.refreshSession({
+    refresh_token: refreshToken,
+  })
+
+  if (error) {
+    throw new Error(error.message)
+  }
+
+  const session = normalizeSession(data.session)
+
+  if (!session?.accessToken) {
+    throw new Error('Refresh session did not return an access token')
+  }
+
+  const user = await ensurePublicUser(
+    normalizeUser(data.user) ?? (await getUserFromAccessToken(session.accessToken)),
+  )
+
+  return {
+    user,
+    session,
+    expiresAt: data.session?.expires_at ?? null,
+  }
+}
+
+export async function updatePasswordWithTokens({
+  accessToken,
+  refreshToken,
+  password,
+}) {
+  if (!accessToken || !refreshToken) {
+    throw new Error('accessToken and refreshToken are required')
+  }
+
+  if (!password || String(password).length < 6) {
+    throw new Error('password must be at least 6 characters')
+  }
+
+  const user = await ensurePublicUser(await getUserFromAccessToken(accessToken))
+  const client = requireAuthAdminClient()
+  const { error } = await client.auth.admin.updateUserById(user.id, {
+    password,
+  })
+
+  if (error) {
+    throw new Error(error.message)
+  }
+
+  const session = await refreshSessionFromRefreshToken(refreshToken)
+
+  return {
+    user: session.user,
+    session: session.session,
+    expiresAt: session.expiresAt,
   }
 }
 

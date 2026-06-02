@@ -790,6 +790,20 @@ async function reduceInventoryAmount({ userId, ingredientId, amount, unit }) {
     throw new Error(`Failed to fetch inventory for deduction: ${error.message}`)
   }
 
+  const available = (rows ?? []).reduce(
+    (total, row) => total + Math.max(0, Number(row[column] ?? 0)),
+    0,
+  )
+
+  if (available < remaining) {
+    const shortage = remaining - available
+    const error = new Error(
+      `在庫が不足しています: ingredient_id=${ingredientId} ${shortage}${unit}`,
+    )
+    error.statusCode = 400
+    throw error
+  }
+
   for (const row of rows ?? []) {
     if (remaining <= 0) {
       break
@@ -846,6 +860,9 @@ export async function markRecipeCooked({
   const userId = await resolveUserId(requestedUserId)
   const servingCount = Math.max(1, Number(servings) || 1)
   const client = ensureSupabase()
+
+  await ensureRecipeBelongsToUser({ client, recipeId, userId })
+
   const { data: recipeIngredients, error } = await client
     .from('recipe_ingredients')
     .select(

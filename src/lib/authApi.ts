@@ -15,6 +15,11 @@ export type AuthSessionResult = {
   expiresAt: number | null
 }
 
+export type AuthTokenPair = {
+  accessToken: string
+  refreshToken: string
+}
+
 async function readJson<T>(response: Response): Promise<T> {
   const responseText = await response.text()
   let payload: ApiResponse<T>
@@ -87,10 +92,7 @@ export async function createGoogleLoginUrl(redirectTo?: string) {
 export async function createSessionFromOAuthTokens({
   accessToken,
   refreshToken,
-}: {
-  accessToken: string
-  refreshToken: string
-}) {
+}: AuthTokenPair) {
   const response = await fetch('/api/auth/session', {
     method: 'POST',
     credentials: 'same-origin',
@@ -98,6 +100,25 @@ export async function createSessionFromOAuthTokens({
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({ accessToken, refreshToken }),
+  })
+
+  return readJson<AuthSessionResult>(response)
+}
+
+export async function updatePasswordWithTokens(
+  tokens: AuthTokenPair,
+  password: string,
+) {
+  const response = await fetch('/api/auth/password-update', {
+    method: 'POST',
+    credentials: 'same-origin',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      ...tokens,
+      password,
+    }),
   })
 
   return readJson<AuthSessionResult>(response)

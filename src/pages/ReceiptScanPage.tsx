@@ -11,7 +11,12 @@ type ReceiptScanPageProps = {
 }
 
 function createCandidateId() {
-  return `candidate-${crypto.randomUUID()}`
+  const randomId =
+    typeof crypto !== 'undefined' && 'randomUUID' in crypto
+      ? crypto.randomUUID()
+      : `${Date.now()}-${Math.random().toString(36).slice(2)}`
+
+  return `candidate-${randomId}`
 }
 
 function normalizeCandidates(items: ReceiptIngredientCandidate[]) {
@@ -153,6 +158,14 @@ export function ReceiptScanPage({
       cameraStreamRef.current = null
     }
   }, [])
+
+  useEffect(() => {
+    return () => {
+      if (previewUrl) {
+        URL.revokeObjectURL(previewUrl)
+      }
+    }
+  }, [previewUrl])
 
   async function parseOcrText(text: string, successMessage: string) {
     if (!text.trim()) {

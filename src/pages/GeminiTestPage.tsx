@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Topbar } from '../components/Topbar'
 import { generateGeminiContent } from '../lib/geminiApi'
 import { useI18n } from '../lib/useI18n'
@@ -37,6 +37,14 @@ export function GeminiTestPage({
   const [statusMessage, setStatusMessage] = useState('')
   const [errorMessage, setErrorMessage] = useState('')
   const [isSending, setIsSending] = useState(false)
+
+  useEffect(() => {
+    return () => {
+      if (previewUrl) {
+        URL.revokeObjectURL(previewUrl)
+      }
+    }
+  }, [previewUrl])
 
   async function handleImageChange(file: File | null) {
     setResponseText('')

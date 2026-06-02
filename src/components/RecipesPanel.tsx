@@ -31,8 +31,8 @@ export function RecipesPanel({
   onCookRecipe,
 }: RecipesPanelProps) {
   const { t } = useI18n()
-  const visibleRecipes = recipes
-    .toSorted((left, right) => getRecipeTimestamp(right) - getRecipeTimestamp(left))
+  const visibleRecipes = [...recipes]
+    .sort((left, right) => getRecipeTimestamp(right) - getRecipeTimestamp(left))
     .slice(0, visibleRecipeCount)
 
   return (

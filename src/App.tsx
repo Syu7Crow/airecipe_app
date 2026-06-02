@@ -14,6 +14,7 @@ import {
   createSessionFromOAuthTokens,
   getCurrentUser,
   logout,
+  type AuthTokenPair,
   type AuthUser,
 } from './lib/authApi'
 import type { AppDestination, Recipe } from './types/ui'
@@ -26,6 +27,18 @@ let oauthSessionRequest: {
 } | null = null
 
 function getPageFromPath(): AppDestination {
+  if (window.location.pathname === '/fridge') {
+    return 'fridge'
+  }
+
+  if (window.location.pathname === '/history') {
+    return 'history'
+  }
+
+  if (window.location.pathname === '/receipt') {
+    return 'receipt'
+  }
+
   if (window.location.pathname === '/test') {
     return 'test'
   }
@@ -39,6 +52,14 @@ function getPageFromPath(): AppDestination {
   }
 
   return 'home'
+}
+
+function getPathForPage(page: AppDestination) {
+  if (page === 'home') {
+    return '/'
+  }
+
+  return `/${page}`
 }
 
 function replacePath(path: string) {
@@ -65,6 +86,7 @@ function readOAuthTokensFromHash() {
   const params = new URLSearchParams(hash)
   const accessToken = params.get('access_token')
   const refreshToken = params.get('refresh_token')
+  const type = params.get('type')
 
   if (!accessToken || !refreshToken) {
     return null
@@ -73,6 +95,7 @@ function readOAuthTokensFromHash() {
   return {
     accessToken,
     refreshToken,
+    type,
   }
 }
 
@@ -98,6 +121,8 @@ function App() {
   const [isAuthLoading, setIsAuthLoading] = useState(true)
   const [selectedRecipe, setSelectedRecipe] = useState<Recipe | null>(null)
   const [recipeBackPage, setRecipeBackPage] = useState<AppDestination>('home')
+  const [passwordResetTokens, setPasswordResetTokens] =
+    useState<AuthTokenPair | null>(null)
 
   useEffect(() => {
     let isMounted = true
@@ -107,6 +132,21 @@ function App() {
 
       try {
         if (oauthTokens) {
+          if (oauthTokens.type === 'recovery') {
+            if (!isMounted) {
+              return
+            }
+
+            setPasswordResetTokens({
+              accessToken: oauthTokens.accessToken,
+              refreshToken: oauthTokens.refreshToken,
+            })
+            setCurrentUser(null)
+            replacePath('/login')
+            setCurrentPage('login')
+            return
+          }
+
           const result = await createOAuthSessionOnce(oauthTokens)
 
           if (!isMounted) {
@@ -114,6 +154,7 @@ function App() {
           }
 
           setCurrentUser(result.user)
+          setPasswordResetTokens(null)
           replacePath('/')
           setCurrentPage('home')
           return
@@ -126,6 +167,7 @@ function App() {
         }
 
         setCurrentUser(result.user)
+        setPasswordResetTokens(null)
 
         if (window.location.pathname === '/login') {
           replacePath('/')
@@ -178,25 +220,14 @@ function App() {
       return
     }
 
-    if (page === 'test') {
-      pushPath('/test')
-    } else if (page === 'settings') {
-      pushPath('/settings')
-    } else if (page === 'login') {
-      pushPath('/login')
-    } else if (window.location.pathname === '/test') {
-      pushPath('/')
-    } else if (window.location.pathname === '/settings') {
-      pushPath('/')
-    } else if (window.location.pathname === '/login') {
-      pushPath('/')
-    }
+    pushPath(getPathForPage(page))
 
     setCurrentPage(page)
   }
 
   function handleAuthenticated(user: AuthUser) {
     setCurrentUser(user)
+    setPasswordResetTokens(null)
     replacePath('/')
     setCurrentPage('home')
   }
@@ -207,6 +238,7 @@ function App() {
     })
     setCurrentUser(null)
     setSelectedRecipe(null)
+    setPasswordResetTokens(null)
     replacePath('/login')
     setCurrentPage('login')
   }
@@ -227,7 +259,12 @@ function App() {
   }
 
   if (!currentUser) {
-    return <LoginScreen onAuthenticated={handleAuthenticated} />
+    return (
+      <LoginScreen
+        passwordResetTokens={passwordResetTokens}
+        onAuthenticated={handleAuthenticated}
+      />
+    )
   }
 
   if (currentPage === 'fridge') {

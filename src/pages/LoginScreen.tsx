@@ -4,24 +4,61 @@ import {
   loginWithPassword,
   registerWithPassword,
   sendPasswordResetEmail,
+  updatePasswordWithTokens,
+  type AuthTokenPair,
   type AuthUser,
 } from "../lib/authApi";
 import { useI18n } from "../lib/useI18n";
 
 type LoginScreenProps = {
+  passwordResetTokens?: AuthTokenPair | null;
   onAuthenticated?: (user: AuthUser) => void;
 };
 
-export default function LoginScreen({ onAuthenticated }: LoginScreenProps) {
+export default function LoginScreen({
+  passwordResetTokens,
+  onAuthenticated,
+}: LoginScreenProps) {
   const { t } = useI18n();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [statusMessage, setStatusMessage] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
+  const isPasswordReset = Boolean(passwordResetTokens);
 
   const handleLogin = async (event?: FormEvent) => {
     event?.preventDefault();
+
+    if (isPasswordReset) {
+      if (!passwordResetTokens || !password) {
+        setErrorMessage(t("login.newPasswordRequired"));
+        return;
+      }
+
+      setIsLoading(true);
+      setStatusMessage("");
+      setErrorMessage("");
+
+      try {
+        const result = await updatePasswordWithTokens(
+          passwordResetTokens,
+          password,
+        );
+        setStatusMessage(t("login.passwordUpdateSuccess"));
+        onAuthenticated?.(result.user);
+      } catch (error) {
+        setErrorMessage(
+          error instanceof Error
+            ? error.message
+            : t("login.passwordUpdateFailed"),
+        );
+      } finally {
+        setIsLoading(false);
+      }
+      return;
+    }
+
     if (!email || !password) return;
     setIsLoading(true);
     setStatusMessage("");
@@ -124,37 +161,44 @@ export default function LoginScreen({ onAuthenticated }: LoginScreenProps) {
           </div>
         </div>
 
-        {/* メールアドレス入力 */}
-        <div style={styles.inputGroup}>
-          <label style={styles.label}>{t("login.email")}</label>
-          <input
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="your@email.com"
-            style={styles.input}
-            autoComplete="email"
-            onFocus={(e) => {
-              (e.target as HTMLInputElement).style.borderColor = "#333333";
-              (e.target as HTMLInputElement).style.boxShadow = "0 0 0 3px rgba(51,51,51,0.12)";
-            }}
-            onBlur={(e) => {
-              (e.target as HTMLInputElement).style.borderColor = "#E5E7EB";
-              (e.target as HTMLInputElement).style.boxShadow = "none";
-            }}
-          />
-        </div>
+        {isPasswordReset ? (
+          <p style={styles.resetDescription}>
+            {t("login.passwordResetMode")}
+          </p>
+        ) : (
+          <div style={styles.inputGroup}>
+            <label style={styles.label}>{t("login.email")}</label>
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="your@email.com"
+              style={styles.input}
+              autoComplete="email"
+              onFocus={(e) => {
+                (e.target as HTMLInputElement).style.borderColor = "#333333";
+                (e.target as HTMLInputElement).style.boxShadow = "0 0 0 3px rgba(51,51,51,0.12)";
+              }}
+              onBlur={(e) => {
+                (e.target as HTMLInputElement).style.borderColor = "#E5E7EB";
+                (e.target as HTMLInputElement).style.boxShadow = "none";
+              }}
+            />
+          </div>
+        )}
 
         {/* パスワード入力 */}
         <div style={styles.inputGroup}>
-          <label style={styles.label}>{t("login.password")}</label>
+          <label style={styles.label}>
+            {isPasswordReset ? t("login.newPassword") : t("login.password")}
+          </label>
           <input
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             placeholder="••••••••"
             style={styles.input}
-            autoComplete="current-password"
+            autoComplete={isPasswordReset ? "new-password" : "current-password"}
             onFocus={(e) => {
               (e.target as HTMLInputElement).style.borderColor = "#333333";
               (e.target as HTMLInputElement).style.boxShadow = "0 0 0 3px rgba(51,51,51,0.12)";
@@ -164,14 +208,16 @@ export default function LoginScreen({ onAuthenticated }: LoginScreenProps) {
               (e.target as HTMLInputElement).style.boxShadow = "none";
             }}
           />
-          <button
-            type="button"
-            style={styles.forgotLink}
-            onClick={handlePasswordReset}
-            disabled={isLoading}
-          >
-            {t("login.forgotPassword")}
-          </button>
+          {!isPasswordReset ? (
+            <button
+              type="button"
+              style={styles.forgotLink}
+              onClick={handlePasswordReset}
+              disabled={isLoading}
+            >
+              {t("login.forgotPassword")}
+            </button>
+          ) : null}
         </div>
 
         {statusMessage ? (
@@ -189,67 +235,78 @@ export default function LoginScreen({ onAuthenticated }: LoginScreenProps) {
         {/* ログインボタン */}
         <button
           type="submit"
-          disabled={isLoading || !email || !password}
+          disabled={
+            isLoading || !password || (!isPasswordReset && !email)
+          }
           style={{
             ...styles.primaryButton,
-            opacity: isLoading || !email || !password ? 0.6 : 1,
-            cursor: isLoading || !email || !password ? "not-allowed" : "pointer",
+            opacity: isLoading || !password || (!isPasswordReset && !email)
+              ? 0.6
+              : 1,
+            cursor: isLoading || !password || (!isPasswordReset && !email)
+              ? "not-allowed"
+              : "pointer",
           }}
           onMouseEnter={(e) => {
-            if (!isLoading && email && password)
+            if (!isLoading && password && (isPasswordReset || email))
               (e.currentTarget as HTMLButtonElement).style.background = "#1F2933";
           }}
           onMouseLeave={(e) => {
             (e.currentTarget as HTMLButtonElement).style.background = "#333333";
           }}
         >
-          {isLoading ? t("login.loading") : t("login.submit")}
+          {isLoading
+            ? t("login.loading")
+            : isPasswordReset
+              ? t("login.updatePassword")
+              : t("login.submit")}
         </button>
 
-        {/* 区切り線 */}
-        <div style={styles.divider}>
-          <span style={styles.dividerLine} />
-          <span style={styles.dividerText}>{t("login.or")}</span>
-          <span style={styles.dividerLine} />
-        </div>
+        {!isPasswordReset ? (
+          <>
+            <div style={styles.divider}>
+              <span style={styles.dividerLine} />
+              <span style={styles.dividerText}>{t("login.or")}</span>
+              <span style={styles.dividerLine} />
+            </div>
 
-        {/* ユーザー登録ボタン */}
-        <button
-          type="button"
-          onClick={handleRegister}
-          style={styles.secondaryButton}
-          onMouseEnter={(e) => {
-            (e.currentTarget as HTMLButtonElement).style.background = "#F6F7F8";
-            (e.currentTarget as HTMLButtonElement).style.borderColor = "#333333";
-          }}
-          onMouseLeave={(e) => {
-            (e.currentTarget as HTMLButtonElement).style.background = "transparent";
-            (e.currentTarget as HTMLButtonElement).style.borderColor = "#D8DDE3";
-          }}
-        >
-          {t("login.register")}
-        </button>
+            <button
+              type="button"
+              onClick={handleRegister}
+              style={styles.secondaryButton}
+              onMouseEnter={(e) => {
+                (e.currentTarget as HTMLButtonElement).style.background = "#F6F7F8";
+                (e.currentTarget as HTMLButtonElement).style.borderColor = "#333333";
+              }}
+              onMouseLeave={(e) => {
+                (e.currentTarget as HTMLButtonElement).style.background = "transparent";
+                (e.currentTarget as HTMLButtonElement).style.borderColor = "#D8DDE3";
+              }}
+            >
+              {t("login.register")}
+            </button>
 
-        {/* Googleログインボタン */}
-        <button
-          type="button"
-          onClick={handleGoogleLogin}
-          style={styles.googleButton}
-          onMouseEnter={(e) => {
-            (e.currentTarget as HTMLButtonElement).style.background = "#F6F7F8";
-          }}
-          onMouseLeave={(e) => {
-            (e.currentTarget as HTMLButtonElement).style.background = "#fff";
-          }}
-        >
-          <svg width="18" height="18" viewBox="0 0 18 18" style={{ marginRight: 10 }}>
-            <path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.874 2.684-6.615z" fill="#4285F4"/>
-            <path d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z" fill="#34A853"/>
-            <path d="M3.964 10.71A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.042l3.007-2.332z" fill="#FBBC05"/>
-            <path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58z" fill="#EA4335"/>
-          </svg>
-          {t("login.google")}
-        </button>
+            <button
+              type="button"
+              onClick={handleGoogleLogin}
+              style={styles.googleButton}
+              onMouseEnter={(e) => {
+                (e.currentTarget as HTMLButtonElement).style.background = "#F6F7F8";
+              }}
+              onMouseLeave={(e) => {
+                (e.currentTarget as HTMLButtonElement).style.background = "#fff";
+              }}
+            >
+              <svg width="18" height="18" viewBox="0 0 18 18" style={{ marginRight: 10 }}>
+                <path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.874 2.684-6.615z" fill="#4285F4"/>
+                <path d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z" fill="#34A853"/>
+                <path d="M3.964 10.71A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.042l3.007-2.332z" fill="#FBBC05"/>
+                <path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58z" fill="#EA4335"/>
+              </svg>
+              {t("login.google")}
+            </button>
+          </>
+        ) : null}
       </form>
 
       <style>{`
@@ -398,6 +455,15 @@ const styles: Record<string, CSSProperties> = {
     background: "#FDF1F1",
     color: "#8A3A3A",
     fontSize: 12,
+    lineHeight: 1.6,
+  },
+  resetDescription: {
+    margin: "0 0 18px",
+    padding: "12px 14px",
+    borderRadius: 10,
+    background: "#F6F7F8",
+    color: "#4B5563",
+    fontSize: 13,
     lineHeight: 1.6,
   },
   primaryButton: {
