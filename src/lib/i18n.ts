@@ -59,8 +59,8 @@ const jaMessages = {
   'home.hero.scanReceipt': 'レシート撮影',
   'home.hero.showRecipes': 'レシピ表示',
   'home.hero.previewAria': 'おすすめ献立のプレビュー',
-  'home.hero.aiSuggestion': 'AI提案',
-  'home.hero.previewTitle': '鮭と小松菜の和風クリーム煮',
+  'home.hero.aiSuggestion': 'AI提案例',
+  'home.hero.previewTitle': 'ハンバーグのキノコソテー添え',
   'home.hero.previewDescription':
     '期限が近い食材を優先した、25分で作れる献立です。',
   'home.ingredients.eyebrow': '在庫管理',
