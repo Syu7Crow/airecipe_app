@@ -6,6 +6,10 @@ import {
   defaultGroqModel,
 } from './groq.js'
 import {
+  checkGeminiConnection,
+  generateGeminiContent,
+} from './gemini.js'
+import {
   generateAndSaveRecipes,
   getCookingHistoryForUser,
   getInventoryForUser,
@@ -145,6 +149,12 @@ export async function handleApiRequest(request, response) {
     return
   }
 
+  if (request.method === 'GET' && url.pathname === '/api/gemini/status') {
+    const status = checkGeminiConnection()
+    sendJson(response, status.ok ? 200 : 500, status)
+    return
+  }
+
   if (request.method === 'GET' && url.pathname === '/api/inventory') {
     await handleInventory(url, response)
     return
@@ -162,6 +172,11 @@ export async function handleApiRequest(request, response) {
 
   if (request.method === 'POST' && url.pathname === '/api/groq/chat') {
     await handleGroqChat(request, response)
+    return
+  }
+
+  if (request.method === 'POST' && url.pathname === '/api/gemini/generate') {
+    await handleGeminiGenerate(request, response)
     return
   }
 
@@ -244,6 +259,29 @@ async function handleGroqChat(request, response) {
     sendJson(response, 500, {
       ok: false,
       message: error instanceof Error ? error.message : 'Groq request failed',
+    })
+  }
+}
+
+async function handleGeminiGenerate(request, response) {
+  try {
+    const body = await readJsonBody(request)
+    const result = await generateGeminiContent({
+      prompt: body?.prompt,
+      imageBase64: body?.imageBase64,
+      mimeType: body?.mimeType,
+      model: body?.model,
+    })
+
+    sendJson(response, 200, {
+      ok: true,
+      ...result,
+    })
+  } catch (error) {
+    sendJson(response, 500, {
+      ok: false,
+      message:
+        error instanceof Error ? error.message : 'Gemini request failed',
     })
   }
 }
