@@ -788,10 +788,19 @@ async function handleRecipeGeneration(request, response, userId) {
       ...result,
     })
   } catch (error) {
-    sendJson(response, 500, {
+    const statusCode = Number.isInteger(error?.statusCode)
+      ? error.statusCode
+      : 500
+    const message =
+      error instanceof Error && error.message === 'Inventory is empty'
+        ? '食材を登録してからレシピを生成してください。'
+        : error instanceof Error
+          ? error.message
+          : 'Recipe generation failed'
+
+    sendJson(response, statusCode, {
       ok: false,
-      message:
-        error instanceof Error ? error.message : 'Recipe generation failed',
+      message,
     })
   }
 }

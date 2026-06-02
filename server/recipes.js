@@ -359,7 +359,9 @@ export async function generateAndSaveRecipes({ userId: requestedUserId, servings
   const { userId, inventory } = await getInventoryForUser(requestedUserId)
 
   if (inventory.length === 0) {
-    throw new Error('Inventory is empty')
+    const error = new Error('Inventory is empty')
+    error.statusCode = 400
+    throw error
   }
 
   const completion = await createGroqChatCompletion({

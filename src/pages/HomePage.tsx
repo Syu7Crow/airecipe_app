@@ -5,45 +5,14 @@ import { IngredientsPanel } from '../components/IngredientsPanel'
 import { RecipesPanel } from '../components/RecipesPanel'
 import { SummaryGrid } from '../components/SummaryGrid'
 import { Topbar } from '../components/Topbar'
-import {
-  expiringIngredients,
-  primaryFeatures,
-  secondaryFeatures,
-  suggestedRecipes,
-  summaryItems,
-} from '../data/home'
+import { primaryFeatures, secondaryFeatures } from '../data/home'
 import {
   fetchInventory,
+  fetchSavedRecipes,
   generateRecipes,
   markRecipeCooked,
 } from '../lib/recipeApi'
 import type { AppDestination, Ingredient, Recipe } from '../types/ui'
-
-function buildSummaryItems(ingredients: Ingredient[], recipes: Recipe[]) {
-  const expiringCount = ingredients.filter((ingredient) =>
-    ['今日まで', '明日まで', '期限切れ'].includes(ingredient.status),
-  ).length
-
-  return [
-    {
-      label: '登録食材',
-      value: String(ingredients.length),
-      note:
-        expiringCount > 0
-          ? `${expiringCount}件は期限が近い`
-          : '期限が近い食材なし',
-    },
-    summaryItems[1],
-    {
-      label: 'レシピ候補',
-      value: String(recipes.length),
-      note: recipes.some((recipe) => recipe.recipeId)
-        ? 'AI生成済み'
-        : 'モック表示中',
-    },
-    summaryItems[3],
-  ]
-}
 
 type HomePageProps = {
   onNavigate?: (page: AppDestination) => void
@@ -51,14 +20,66 @@ type HomePageProps = {
   onLogout?: () => void | Promise<void>
 }
 
+function isNearExpiration(ingredient: Ingredient) {
+  if (!ingredient.expirationDate) {
+    return false
+  }
+
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  const expiration = new Date(`${ingredient.expirationDate}T00:00:00`)
+
+  if (Number.isNaN(expiration.getTime())) {
+    return false
+  }
+
+  const diffDays = Math.ceil(
+    (expiration.getTime() - today.getTime()) / (1000 * 60 * 60 * 24),
+  )
+
+  return diffDays >= 0 && diffDays <= 3
+}
+
+function buildSummaryItems(ingredients: Ingredient[], recipes: Recipe[]) {
+  const nearExpirationCount = ingredients.filter(isNearExpiration).length
+  const favoriteCount = recipes.filter((recipe) => recipe.isFavorite).length
+
+  return [
+    {
+      label: '登録食材',
+      value: String(ingredients.length),
+      note: ingredients.length
+        ? 'ログイン中のユーザーの在庫'
+        : 'まず食材を登録してください',
+    },
+    {
+      label: '期限間近',
+      value: String(nearExpirationCount),
+      note:
+        nearExpirationCount > 0
+          ? '3日以内に期限が近い食材'
+          : '期限が近い食材はありません',
+    },
+    {
+      label: 'レシピ候補',
+      value: String(recipes.length),
+      note: recipes.length ? '保存済みのレシピ' : 'まだ生成されていません',
+    },
+    {
+      label: 'お気に入り',
+      value: String(favoriteCount),
+      note: '保存済みレシピから集計',
+    },
+  ]
+}
+
 export function HomePage({
   onNavigate,
   onSelectRecipe,
   onLogout,
 }: HomePageProps) {
-  const [ingredients, setIngredients] =
-    useState<Ingredient[]>(expiringIngredients)
-  const [recipes, setRecipes] = useState<Recipe[]>(suggestedRecipes)
+  const [ingredients, setIngredients] = useState<Ingredient[]>([])
+  const [recipes, setRecipes] = useState<Recipe[]>([])
   const [isGenerating, setIsGenerating] = useState(false)
   const [isCooking, setIsCooking] = useState(false)
   const [statusMessage, setStatusMessage] = useState('')
@@ -74,12 +95,27 @@ export function HomePage({
 
     fetchInventory()
       .then((result) => {
-        if (isMounted && result.inventory.length) {
+        if (isMounted) {
           setIngredients(result.inventory)
         }
       })
       .catch((error) => {
         console.warn('[vite] Inventory fetch failed:', error)
+        if (isMounted) {
+          setStatusMessage(
+            error instanceof Error ? error.message : '食材の取得に失敗しました',
+          )
+        }
+      })
+
+    fetchSavedRecipes()
+      .then((result) => {
+        if (isMounted) {
+          setRecipes(result.recipes)
+        }
+      })
+      .catch((error) => {
+        console.warn('[vite] Saved recipes fetch failed:', error)
       })
 
     return () => {
@@ -87,7 +123,18 @@ export function HomePage({
     }
   }, [])
 
+  function navigateToReceipt() {
+    onNavigate?.('receipt')
+  }
+
   async function handleGenerateRecipe() {
+    if (!ingredients.length) {
+      setStatusMessage(
+        '食材を登録してからレシピを生成してください。レシート登録から食材を追加できます。',
+      )
+      return
+    }
+
     setIsGenerating(true)
     setStatusMessage('')
 
@@ -100,7 +147,9 @@ export function HomePage({
       }
     } catch (error) {
       console.error('[vite] Recipe generation failed:', error)
-      setStatusMessage('レシピ生成に失敗しました')
+      setStatusMessage(
+        error instanceof Error ? error.message : 'レシピ生成に失敗しました',
+      )
     } finally {
       setIsGenerating(false)
     }
@@ -123,11 +172,13 @@ export function HomePage({
     try {
       const result = await markRecipeCooked(cookingRecipe.recipeId, servings)
       setIngredients(result.inventory)
-      setStatusMessage(`${servings}人分の在庫を更新しました`)
+      setStatusMessage(`${servings}人前として在庫を更新しました`)
       setCookingRecipe(null)
     } catch (error) {
       console.error('[vite] Cooking update failed:', error)
-      setStatusMessage('在庫の更新に失敗しました')
+      setStatusMessage(
+        error instanceof Error ? error.message : '在庫の更新に失敗しました',
+      )
     } finally {
       setIsCooking(false)
     }
@@ -141,7 +192,8 @@ export function HomePage({
         <HeroPanel
           isGenerating={isGenerating}
           onGenerateRecipe={handleGenerateRecipe}
-          onScanReceipt={() => onNavigate?.('receipt')}
+          onAddIngredient={navigateToReceipt}
+          onScanReceipt={navigateToReceipt}
           onShowRecipes={() => onNavigate?.('history')}
         />
 
@@ -155,14 +207,18 @@ export function HomePage({
 
         <section className="feature-section" aria-label="クイックアクセス">
           <div className="feature-grid">
-            {primaryFeatures.map((feature) => (
+            {primaryFeatures.map((feature, index) => (
               <FeatureCard
                 key={feature.title}
                 feature={feature}
                 onAction={
-                  feature.title === '調理履歴'
-                    ? () => onNavigate?.('history')
-                    : undefined
+                  index === 0
+                    ? handleGenerateRecipe
+                    : index === 1
+                      ? navigateToReceipt
+                      : index === 3
+                        ? () => onNavigate?.('history')
+                        : undefined
                 }
               />
             ))}
@@ -170,7 +226,10 @@ export function HomePage({
         </section>
 
         <div className="dashboard-grid">
-          <IngredientsPanel ingredients={ingredients} />
+          <IngredientsPanel
+            ingredients={ingredients}
+            onAddIngredient={navigateToReceipt}
+          />
           <RecipesPanel
             recipes={recipes}
             isGenerating={isGenerating}
@@ -204,7 +263,7 @@ export function HomePage({
             <p className="eyebrow">調理済み</p>
             <h2 id="cook-modal-title">{cookingRecipe.name}</h2>
             <label className="serving-field">
-              <span>何人分作りましたか</span>
+              <span>何人前作りましたか</span>
               <input
                 type="number"
                 min="1"

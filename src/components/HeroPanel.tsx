@@ -3,6 +3,7 @@ import { Icon } from './Icon'
 type HeroPanelProps = {
   isGenerating: boolean
   onGenerateRecipe: () => void
+  onAddIngredient?: () => void
   onScanReceipt?: () => void
   onShowRecipes?: () => void
 }
@@ -10,6 +11,7 @@ type HeroPanelProps = {
 export function HeroPanel({
   isGenerating,
   onGenerateRecipe,
+  onAddIngredient,
   onScanReceipt,
   onShowRecipes,
 }: HeroPanelProps) {
@@ -35,7 +37,11 @@ export function HeroPanel({
             <Icon name="spark" />
             <span>{isGenerating ? '生成中...' : 'レシピを生成'}</span>
           </button>
-          <button type="button" className="secondary-button">
+          <button
+            type="button"
+            className="secondary-button"
+            onClick={onAddIngredient}
+          >
             <Icon name="plus" />
             <span>食材を登録</span>
           </button>
