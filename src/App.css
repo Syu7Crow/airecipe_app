@@ -929,6 +929,18 @@ button:disabled {
   gap: 18px;
 }
 
+.receipt-source-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.receipt-source-actions .secondary-button {
+  width: 100%;
+  min-height: 46px;
+  padding: 0 16px;
+}
+
 .receipt-file-field {
   display: grid;
   min-height: 46px;
@@ -948,6 +960,25 @@ button:disabled {
   overflow: hidden;
   clip: rect(0 0 0 0);
   white-space: nowrap;
+}
+
+.receipt-camera-panel {
+  display: grid;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.receipt-camera-preview {
+  width: 100%;
+  max-height: 420px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #1f2933;
+  object-fit: contain;
+}
+
+.receipt-camera-panel .primary-button {
+  min-height: 46px;
 }
 
 .receipt-preview,
@@ -1021,6 +1052,19 @@ button:disabled {
 
 .receipt-candidates .primary-button {
   padding: 0 18px;
+}
+
+.receipt-candidate-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.receipt-candidate-actions .primary-button,
+.receipt-candidate-actions .secondary-button {
+  min-height: 40px;
+  padding: 0 16px;
 }
 
 .receipt-candidate-list {
@@ -1167,6 +1211,7 @@ button:disabled {
   .modal-actions,
   .cook-complete-panel,
   .recipe-detail__toolbar,
+  .receipt-candidate-actions,
   .receipt-status,
   .history-error {
     flex-direction: column;
@@ -1196,11 +1241,16 @@ button:disabled {
   .cook-complete-panel .serving-field,
   .recipe-detail__toolbar .secondary-button,
   .favorite-button,
-  .receipt-candidates .primary-button {
+  .receipt-candidates .primary-button,
+  .receipt-candidate-actions .secondary-button {
     width: 100%;
   }
 
   .receipt-candidate {
+    grid-template-columns: 1fr;
+  }
+
+  .receipt-source-actions {
     grid-template-columns: 1fr;
   }
 }

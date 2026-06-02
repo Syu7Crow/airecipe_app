@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Topbar } from '../components/Topbar'
 import { importReceiptItems, parseReceiptText } from '../lib/receiptApi'
 import { recognizeReceiptImage } from '../lib/receiptOcr'
@@ -119,6 +119,8 @@ function localFallbackParseReceiptText(text: string) {
 }
 
 export function ReceiptScanPage({ onNavigate }: ReceiptScanPageProps) {
+  const videoRef = useRef<HTMLVideoElement | null>(null)
+  const cameraStreamRef = useRef<MediaStream | null>(null)
   const [previewUrl, setPreviewUrl] = useState('')
   const [ocrText, setOcrText] = useState('')
   const [candidates, setCandidates] = useState<ReceiptIngredientCandidate[]>([])
@@ -129,7 +131,22 @@ export function ReceiptScanPage({ onNavigate }: ReceiptScanPageProps) {
   const [isReading, setIsReading] = useState(false)
   const [isParsing, setIsParsing] = useState(false)
   const [isImporting, setIsImporting] = useState(false)
+  const [isCameraOpen, setIsCameraOpen] = useState(false)
   const [importedCount, setImportedCount] = useState(0)
+
+  useEffect(() => {
+    if (isCameraOpen && videoRef.current && cameraStreamRef.current) {
+      videoRef.current.srcObject = cameraStreamRef.current
+      void videoRef.current.play()
+    }
+  }, [isCameraOpen])
+
+  useEffect(() => {
+    return () => {
+      cameraStreamRef.current?.getTracks().forEach((track) => track.stop())
+      cameraStreamRef.current = null
+    }
+  }, [])
 
   async function parseOcrText(text: string, successMessage: string) {
     if (!text.trim()) {
@@ -198,6 +215,73 @@ export function ReceiptScanPage({ onNavigate }: ReceiptScanPageProps) {
     }
   }
 
+  async function startCamera() {
+    if (!navigator.mediaDevices?.getUserMedia) {
+      setErrorMessage('このブラウザではカメラを利用できません')
+      return
+    }
+
+    setErrorMessage('')
+    setStatusMessage('')
+
+    try {
+      cameraStreamRef.current?.getTracks().forEach((track) => track.stop())
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: { ideal: 'environment' } },
+        audio: false,
+      })
+      cameraStreamRef.current = stream
+      setIsCameraOpen(true)
+    } catch (error) {
+      console.error('[vite] Camera start failed:', error)
+      setErrorMessage('カメラを起動できませんでした')
+    }
+  }
+
+  function stopCamera() {
+    cameraStreamRef.current?.getTracks().forEach((track) => track.stop())
+    cameraStreamRef.current = null
+    if (videoRef.current) {
+      videoRef.current.srcObject = null
+    }
+    setIsCameraOpen(false)
+  }
+
+  async function captureCameraImage() {
+    const video = videoRef.current
+
+    if (!video || !video.videoWidth || !video.videoHeight) {
+      setErrorMessage('カメラ画像の準備ができていません')
+      return
+    }
+
+    const canvas = document.createElement('canvas')
+    canvas.width = video.videoWidth
+    canvas.height = video.videoHeight
+    const context = canvas.getContext('2d')
+
+    if (!context) {
+      setErrorMessage('撮影画像を作成できませんでした')
+      return
+    }
+
+    context.drawImage(video, 0, 0, canvas.width, canvas.height)
+
+    const blob = await new Promise<Blob | null>((resolve) => {
+      canvas.toBlob(resolve, 'image/jpeg', 0.92)
+    })
+
+    if (!blob) {
+      setErrorMessage('撮影画像を作成できませんでした')
+      return
+    }
+
+    stopCamera()
+    await handleFileChange(
+      new File([blob], `receipt-${Date.now()}.jpg`, { type: 'image/jpeg' }),
+    )
+  }
+
   async function handleParseText() {
     await parseOcrText(
       ocrText,
@@ -212,6 +296,26 @@ export function ReceiptScanPage({ onNavigate }: ReceiptScanPageProps) {
     setCandidates((current) =>
       current.map((item) => (item.id === id ? { ...item, ...patch } : item)),
     )
+  }
+
+  function addManualCandidate() {
+    setCandidates((current) => [
+      ...current,
+      {
+        id: createCandidateId(),
+        name: '',
+        category: 'その他',
+        quantity: 1,
+        gram: null,
+        expirationDate: null,
+        memo: '手動追加',
+        selected: true,
+        sourceLine: '手動追加',
+      },
+    ])
+    setImportedCount(0)
+    setStatusMessage('手動入力用の項目を追加しました')
+    setErrorMessage('')
   }
 
   async function handleImport() {
@@ -261,22 +365,50 @@ export function ReceiptScanPage({ onNavigate }: ReceiptScanPageProps) {
           <div className="panel receipt-uploader">
             <div className="section-heading">
               <div>
-                <p className="eyebrow">画像</p>
-                <h2>レシートを選択</h2>
+                <p className="eyebrow">画像 / カメラ</p>
+                <h2>レシートを読み取る</h2>
               </div>
             </div>
 
-            <label className="receipt-file-field">
-              <input
-                type="file"
-                accept="image/*"
-                capture="environment"
-                onChange={(event) =>
-                  handleFileChange(event.currentTarget.files?.[0] ?? null)
-                }
-              />
-              <span>画像を選ぶ</span>
-            </label>
+            <div className="receipt-source-actions">
+              <label className="receipt-file-field">
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(event) =>
+                    handleFileChange(event.currentTarget.files?.[0] ?? null)
+                  }
+                />
+                <span>画像を選ぶ</span>
+              </label>
+              <button
+                type="button"
+                className="secondary-button"
+                onClick={isCameraOpen ? stopCamera : startCamera}
+                disabled={isReading || isParsing}
+              >
+                {isCameraOpen ? 'カメラ停止' : 'カメラを起動'}
+              </button>
+            </div>
+
+            {isCameraOpen ? (
+              <div className="receipt-camera-panel">
+                <video
+                  ref={videoRef}
+                  className="receipt-camera-preview"
+                  playsInline
+                  muted
+                />
+                <button
+                  type="button"
+                  className="primary-button"
+                  onClick={captureCameraImage}
+                  disabled={isReading || isParsing}
+                >
+                  撮影して読み取る
+                </button>
+              </div>
+            ) : null}
 
             {previewUrl ? (
               <img
@@ -348,14 +480,24 @@ export function ReceiptScanPage({ onNavigate }: ReceiptScanPageProps) {
                 <p className="eyebrow">登録候補</p>
                 <h2>確認して在庫に追加</h2>
               </div>
-              <button
-                type="button"
-                className="primary-button"
-                onClick={handleImport}
-                disabled={isImporting}
-              >
-                {isImporting ? '登録中...' : '選択した食材を登録'}
-              </button>
+              <div className="receipt-candidate-actions">
+                <button
+                  type="button"
+                  className="secondary-button"
+                  onClick={addManualCandidate}
+                  disabled={isImporting}
+                >
+                  項目追加
+                </button>
+                <button
+                  type="button"
+                  className="primary-button"
+                  onClick={handleImport}
+                  disabled={isImporting}
+                >
+                  {isImporting ? '登録中...' : '選択した食材を登録'}
+                </button>
+              </div>
             </div>
 
             <div className="receipt-candidate-list">
@@ -439,7 +581,26 @@ export function ReceiptScanPage({ onNavigate }: ReceiptScanPageProps) {
               ))}
             </div>
           </section>
-        ) : null}
+        ) : (
+          <section className="panel receipt-candidates">
+            <div className="section-heading">
+              <div>
+                <p className="eyebrow">登録候補</p>
+                <h2>手動で追加</h2>
+              </div>
+              <button
+                type="button"
+                className="secondary-button"
+                onClick={addManualCandidate}
+              >
+                項目追加
+              </button>
+            </div>
+            <p className="empty-text">
+              OCRで拾えなかった食材は手動で追加できます。
+            </p>
+          </section>
+        )}
       </main>
     </div>
   )
