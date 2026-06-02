@@ -15,3 +15,7 @@ export function PATCH(request) {
 export function DELETE(request) {
   return handleVercelRequest(request)
 }
+
+export function OPTIONS(request) {
+  return handleVercelRequest(request)
+}
