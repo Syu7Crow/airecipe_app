@@ -2,7 +2,6 @@ import { useState, type CSSProperties, type FormEvent } from "react";
 import {
   createGoogleLoginUrl,
   loginWithPassword,
-  registerWithPassword,
   sendPasswordResetEmail,
   updatePasswordWithTokens,
   type AuthTokenPair,
@@ -13,11 +12,13 @@ import { useI18n } from "../lib/useI18n";
 type LoginScreenProps = {
   passwordResetTokens?: AuthTokenPair | null;
   onAuthenticated?: (user: AuthUser) => void;
+  onNavigateToRegister?: () => void;
 };
 
 export default function LoginScreen({
   passwordResetTokens,
   onAuthenticated,
+  onNavigateToRegister,
 }: LoginScreenProps) {
   const { t } = useI18n();
   const [email, setEmail] = useState("");
@@ -71,36 +72,6 @@ export default function LoginScreen({
     } catch (error) {
       setErrorMessage(
         error instanceof Error ? error.message : t("login.failed"),
-      );
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleRegister = async () => {
-    if (!email || !password) {
-      setErrorMessage(t("login.emailPasswordRequired"));
-      return;
-    }
-
-    setIsLoading(true);
-    setStatusMessage("");
-    setErrorMessage("");
-
-    try {
-      const result = await registerWithPassword(email, password);
-      setStatusMessage(
-        result.needsEmailConfirmation
-          ? t("login.confirmationSent")
-          : t("login.registerSuccess"),
-      );
-
-      if (result.user && !result.needsEmailConfirmation) {
-        onAuthenticated?.(result.user);
-      }
-    } catch (error) {
-      setErrorMessage(
-        error instanceof Error ? error.message : t("login.registerFailed"),
       );
     } finally {
       setIsLoading(false);
@@ -272,7 +243,7 @@ export default function LoginScreen({
 
             <button
               type="button"
-              onClick={handleRegister}
+              onClick={onNavigateToRegister}
               style={styles.secondaryButton}
               onMouseEnter={(e) => {
                 (e.currentTarget as HTMLButtonElement).style.background = "#F6F7F8";
