@@ -69,3 +69,20 @@ export async function importReceiptItems(
     inventory: Ingredient[]
   }>(response)
 }
+
+export async function importReceiptItemsDetail(
+  items: ReceiptIngredientCandidate[],
+) {
+  const response = await fetch('/api/receipts/import-detail', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ items }),
+  })
+
+  return readJson<{
+    userId: string
+    importedCount: number
+  }>(response)
+}

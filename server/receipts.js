@@ -438,3 +438,88 @@ export async function importReceiptItems({
     imported,
   }
 }
+
+export async function importReceiptItemsDetail({
+  items,
+  userId: requestedUserId,
+}) {
+  const userId = await resolveUserId(requestedUserId)
+  const client = ensureSupabase()
+  
+  const selectedItems = (Array.isArray(items) ? items : []).filter(
+    (item) => item.selected !== false && item.name,
+  )
+
+  if (!selectedItems.length) {
+    throw new Error('No receipt items selected')
+  }
+
+  const imported = []
+
+  for (const item of selectedItems) {
+    let amountStr = '1個'
+    const gramVal = item.gram ? Number(item.gram) : null
+    const qtyVal = item.quantity ? Number(item.quantity) : null
+    
+    if (gramVal && gramVal > 0) {
+      amountStr = `${gramVal}g`
+    } else if (qtyVal && qtyVal > 0) {
+      amountStr = `${qtyVal}個`
+    }
+
+    const { data: ingredient, error: ingredientError } = await client
+      .from('ingredient_management')
+      .insert({
+        user_id: userId,
+        ingredient_name: item.name,
+        category: item.category,
+        barcode: `receipt-${Date.now()}`,
+        amount: amountStr,
+        is_opened: false,
+        best_before_date: item.bestBeforeDate ? String(item.bestBeforeDate) : null,
+        expiration_date: item.expirationDate ? String(item.expirationDate) : null,
+      })
+      .select('ingredient_id, ingredient_name')
+      .single()
+
+    if (ingredientError) {
+      throw new Error(`Failed to create ingredient detail: ${ingredientError.message}`)
+    }
+
+    let invExpirationDate = item.expirationDate || item.bestBeforeDate || null
+    if (!invExpirationDate) {
+      invExpirationDate = fallbackExpirationDate(item)
+    }
+
+    const { data: inventoryData, error: inventoryError } = await client
+      .from('inventory')
+      .insert({
+        ingredient_id: ingredient.ingredient_id,
+        user_id: userId,
+        quantity: qtyVal,
+        gram: gramVal,
+        purchase_date: todayIsoDate(),
+        expiration_date: invExpirationDate,
+        memo: item.memo || 'レシートOCR詳細登録',
+      })
+      .select('inventory_id')
+      .single()
+
+    if (inventoryError) {
+      throw new Error(`Failed to import inventory detail: ${inventoryError.message}`)
+    }
+
+    imported.push({
+      inventoryId: inventoryData.inventory_id,
+      ingredientId: ingredient.ingredient_id,
+      name: ingredient.ingredient_name,
+    })
+  }
+
+  return {
+    userId,
+    importedCount: imported.length,
+    imported,
+  }
+}
+

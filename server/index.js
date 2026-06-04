@@ -20,6 +20,7 @@ import {
 import {
   fallbackParseReceiptText,
   importReceiptItems,
+  importReceiptItemsDetail,
   parseReceiptText,
 } from './receipts.js'
 import { checkSupabaseConnection } from './supabase.js'
@@ -207,6 +208,11 @@ export async function handleApiRequest(request, response) {
 
   if (request.method === 'POST' && url.pathname === '/api/receipts/import') {
     await handleReceiptImport(request, response)
+    return
+  }
+
+  if (request.method === 'POST' && url.pathname === '/api/receipts/import-detail') {
+    await handleReceiptImportDetail(request, response)
     return
   }
 
@@ -541,6 +547,27 @@ async function handleReceiptImport(request, response) {
       ok: false,
       message:
         error instanceof Error ? error.message : 'Receipt import failed',
+    })
+  }
+}
+
+async function handleReceiptImportDetail(request, response) {
+  try {
+    const body = await readJsonBody(request)
+    const result = await importReceiptItemsDetail({
+      items: body?.items,
+      userId: body?.userId,
+    })
+
+    sendJson(response, 200, {
+      ok: true,
+      ...result,
+    })
+  } catch (error) {
+    sendJson(response, 500, {
+      ok: false,
+      message:
+        error instanceof Error ? error.message : 'Receipt import detail failed',
     })
   }
 }

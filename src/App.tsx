@@ -8,9 +8,10 @@ import { RecipeDetailPage } from './pages/RecipeDetailPage'
 import { CookingHistoryPage } from './pages/CookingHistoryPage'
 import { ReceiptScanPage } from './pages/ReceiptScanPage'
 import { GeminiTestPage } from './pages/GeminiTestPage'
-import type { AppDestination, Recipe } from './types/ui'
+import { ReceiptDetailRegisterPage } from './pages/ReceiptDetailRegisterPage'
+import type { AppDestination, Recipe, ReceiptIngredientCandidate } from './types/ui'
 
-type Page = AppDestination | 'recipe'
+type Page = AppDestination | 'recipe' | 'receipt-detail'
 
 function getPageFromPath(): AppDestination {
   return window.location.pathname === '/test' ? 'test' : 'home'
@@ -20,6 +21,7 @@ function App() {
   const [currentPage, setCurrentPage] = useState<Page>(getPageFromPath)
   const [selectedRecipe, setSelectedRecipe] = useState<Recipe | null>(null)
   const [recipeBackPage, setRecipeBackPage] = useState<AppDestination>('home')
+  const [selectedReceiptItems, setSelectedReceiptItems] = useState<ReceiptIngredientCandidate[]>([])
 
   useEffect(() => {
     function handlePopState() {
@@ -61,7 +63,25 @@ function App() {
   }
 
   if (currentPage === 'receipt') {
-    return <ReceiptScanPage onNavigate={handleNavigate} />
+    return (
+      <ReceiptScanPage
+        onNavigate={handleNavigate}
+        onProceedToDetail={(items) => {
+          setSelectedReceiptItems(items)
+          handleNavigate('receipt-detail')
+        }}
+      />
+    )
+  }
+
+  if (currentPage === 'receipt-detail') {
+    return (
+      <ReceiptDetailRegisterPage
+        items={selectedReceiptItems}
+        onBack={() => handleNavigate('receipt')}
+        onNavigate={handleNavigate}
+      />
+    )
   }
 
   if (currentPage === 'test') {

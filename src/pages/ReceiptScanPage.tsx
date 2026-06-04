@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState } from 'react'
 import { Topbar } from '../components/Topbar'
-import { importReceiptItems, parseReceiptText } from '../lib/receiptApi'
+import { parseReceiptText } from '../lib/receiptApi'
 import { recognizeReceiptImage } from '../lib/receiptOcr'
 import type { AppDestination, ReceiptIngredientCandidate } from '../types/ui'
 
 type ReceiptScanPageProps = {
   onNavigate?: (page: AppDestination) => void
+  onProceedToDetail?: (items: ReceiptIngredientCandidate[]) => void
 }
 
 function createCandidateId() {
@@ -118,7 +119,7 @@ function localFallbackParseReceiptText(text: string) {
     .filter((item) => item.name)
 }
 
-export function ReceiptScanPage({ onNavigate }: ReceiptScanPageProps) {
+export function ReceiptScanPage({ onNavigate, onProceedToDetail }: ReceiptScanPageProps) {
   const videoRef = useRef<HTMLVideoElement | null>(null)
   const cameraStreamRef = useRef<MediaStream | null>(null)
   const [previewUrl, setPreviewUrl] = useState('')
@@ -130,9 +131,7 @@ export function ReceiptScanPage({ onNavigate }: ReceiptScanPageProps) {
   const [errorMessage, setErrorMessage] = useState('')
   const [isReading, setIsReading] = useState(false)
   const [isParsing, setIsParsing] = useState(false)
-  const [isImporting, setIsImporting] = useState(false)
   const [isCameraOpen, setIsCameraOpen] = useState(false)
-  const [importedCount, setImportedCount] = useState(0)
 
   useEffect(() => {
     if (isCameraOpen && videoRef.current && cameraStreamRef.current) {
@@ -189,7 +188,6 @@ export function ReceiptScanPage({ onNavigate }: ReceiptScanPageProps) {
     setPreviewUrl(URL.createObjectURL(file))
     setOcrText('')
     setCandidates([])
-    setImportedCount(0)
     setStatusMessage('')
     setErrorMessage('')
     setProgress(0)
@@ -313,12 +311,11 @@ export function ReceiptScanPage({ onNavigate }: ReceiptScanPageProps) {
         sourceLine: '手動追加',
       },
     ])
-    setImportedCount(0)
     setStatusMessage('手動入力用の項目を追加しました')
     setErrorMessage('')
   }
 
-  async function handleImport() {
+  function handleProceed() {
     const selectedItems = candidates.filter((item) => item.selected)
 
     if (!selectedItems.length) {
@@ -326,22 +323,8 @@ export function ReceiptScanPage({ onNavigate }: ReceiptScanPageProps) {
       return
     }
 
-    setIsImporting(true)
-    setStatusMessage('')
-    setErrorMessage('')
-
-    try {
-      const result = await importReceiptItems(selectedItems)
-      setImportedCount(result.importedCount)
-      setStatusMessage(`${result.importedCount}件の食材を在庫に登録しました`)
-    } catch (error) {
-      console.error('[vite] Receipt import failed:', error)
-      setErrorMessage('食材の登録に失敗しました')
-    } finally {
-      setIsImporting(false)
-    }
+    onProceedToDetail?.(selectedItems)
   }
-
   return (
     <div className="app-shell">
       <Topbar onNavigate={onNavigate} />
@@ -455,15 +438,6 @@ export function ReceiptScanPage({ onNavigate }: ReceiptScanPageProps) {
         {statusMessage ? (
           <div className="status-message receipt-status" role="status">
             <span>{statusMessage}</span>
-            {importedCount > 0 ? (
-              <button
-                type="button"
-                className="small-button"
-                onClick={() => onNavigate?.('fridge')}
-              >
-                在庫を見る
-              </button>
-            ) : null}
           </div>
         ) : null}
 
@@ -485,17 +459,17 @@ export function ReceiptScanPage({ onNavigate }: ReceiptScanPageProps) {
                   type="button"
                   className="secondary-button"
                   onClick={addManualCandidate}
-                  disabled={isImporting}
+                  disabled={isReading || isParsing}
                 >
                   項目追加
                 </button>
                 <button
                   type="button"
                   className="primary-button"
-                  onClick={handleImport}
-                  disabled={isImporting}
+                  onClick={handleProceed}
+                  disabled={isReading || isParsing}
                 >
-                  {isImporting ? '登録中...' : '選択した食材を登録'}
+                  詳細登録に進む
                 </button>
               </div>
             </div>

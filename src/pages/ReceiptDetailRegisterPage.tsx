@@ -1,0 +1,334 @@
+import { useState, useEffect } from 'react'
+import { Topbar } from '../components/Topbar'
+import { importReceiptItemsDetail } from '../lib/receiptApi'
+import type { AppDestination, ReceiptIngredientCandidate } from '../types/ui'
+
+type ReceiptDetailRegisterPageProps = {
+  items: ReceiptIngredientCandidate[]
+  onBack: () => void
+  onNavigate: (page: AppDestination) => void
+}
+
+type EditableCandidate = ReceiptIngredientCandidate & {
+  bestBeforeDate: string
+  expirationDate: string
+  memo: string
+}
+
+export function ReceiptDetailRegisterPage({
+  items,
+  onBack,
+  onNavigate,
+}: ReceiptDetailRegisterPageProps) {
+  const [formData, setFormData] = useState<EditableCandidate[]>([])
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [statusMessage, setStatusMessage] = useState('')
+  const [errorMessage, setErrorMessage] = useState('')
+
+  // Set initial default data based on passed items
+  useEffect(() => {
+    const today = new Date().toISOString().slice(0, 10)
+
+    const getDaysForCategory = (cat: string) => {
+      switch (cat) {
+        case '肉・卵・魚':
+        case '肉':
+        case '魚':
+          return 2
+        case '野菜':
+          return 5
+        case '乳製品':
+          return 7
+        case '加工品':
+          return 14
+        case '飲料':
+          return 14
+        default:
+          return 7
+      }
+    }
+
+    const addDays = (dateStr: string, days: number) => {
+      const date = new Date(dateStr)
+      date.setDate(date.getDate() + days)
+      return date.toISOString().slice(0, 10)
+    }
+
+    const initialData = items.map((item) => {
+      let cat = item.category
+      if (cat === '肉' || cat === '魚' || cat === '卵') {
+        cat = '肉・卵・魚'
+      }
+
+      const defaultDays = getDaysForCategory(cat)
+      const bestBefore = item.bestBeforeDate || item.expirationDate || addDays(today, defaultDays)
+      const expiration = item.expirationDate || addDays(today, defaultDays + 1)
+
+      return {
+        ...item,
+        category: cat,
+        quantity: item.quantity ?? 1,
+        gram: item.gram ?? null,
+        bestBeforeDate: bestBefore,
+        expirationDate: expiration,
+        memo: item.memo || '',
+      } as EditableCandidate
+    })
+    setFormData(initialData)
+  }, [items])
+
+  const categories = [
+    '肉・卵・魚',
+    '野菜',
+    '乳製品',
+    '加工品',
+    '飲料',
+    'その他',
+  ]
+
+  const handleChange = (
+    index: number,
+    field: keyof EditableCandidate,
+    value: any,
+  ) => {
+    setFormData((current) =>
+      current.map((item, idx) =>
+        idx === index ? { ...item, [field]: value } : item,
+      ),
+    )
+  }
+
+  const handleSubmit = async () => {
+    // Validation
+    for (const item of formData) {
+      if (!item.name.trim()) {
+        setErrorMessage('食材名を入力してください。')
+        return
+      }
+      if (!item.category) {
+        setErrorMessage('カテゴリーを選択してください。')
+        return
+      }
+      if (item.quantity === null || item.quantity === undefined || item.quantity <= 0) {
+        setErrorMessage('個数は1以上を入力してください。')
+        return
+      }
+    }
+
+    setIsSubmitting(true)
+    setErrorMessage('')
+    setStatusMessage('')
+
+    try {
+      const result = await importReceiptItemsDetail(formData)
+      setStatusMessage(`${result.importedCount}件の食材を冷蔵庫に登録しました！`)
+    } catch (error) {
+      console.error('[vite] Import detail failed:', error)
+      setErrorMessage('一括登録に失敗しました。時間をおいて再度お試しください。')
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  return (
+    <div className="app-shell">
+      <Topbar onNavigate={onNavigate} />
+
+      <main className="receipt-detail-page">
+        {/* Back Link */}
+        <div className="back-link-wrapper">
+          <button type="button" className="back-text-button" onClick={onBack}>
+            <span className="arrow-left">←</span> 食材登録に戻る
+          </button>
+        </div>
+
+        {/* Header */}
+        <div className="detail-header">
+          <h1>詳細登録</h1>
+          <p className="subtitle">
+            複数の食材をまとめて編集して、冷蔵庫に一括登録できます。
+          </p>
+        </div>
+
+        {/* Step Navigation Bar */}
+        <div className="step-bar">
+          <div className="step-item completed">
+            <span className="step-number">✓</span>
+            <span className="step-label">食材登録</span>
+          </div>
+          <div className="step-connector"></div>
+          <div className="step-item active">
+            <span className="step-number">2</span>
+            <span className="step-label">詳細登録</span>
+          </div>
+        </div>
+
+        {/* Status Messages */}
+        {statusMessage && (
+          <div className="status-message success-message" role="status">
+            <span>{statusMessage}</span>
+            <button
+              type="button"
+              className="primary-button inline-fridge-button"
+              onClick={() => onNavigate('fridge')}
+            >
+              冷蔵庫を見る
+            </button>
+          </div>
+        )}
+
+        {errorMessage && (
+          <div className="status-message error-message" role="alert">
+            <span>{errorMessage}</span>
+          </div>
+        )}
+
+        {/* Main Editable Items List */}
+        {!statusMessage && (
+          <div className="panel detail-form-panel">
+            <div className="panel-header">
+              <h2>登録内容（複数）</h2>
+              <p className="panel-lead">
+                食材ごとに個数・グラム・期限・メモを入力してください。
+              </p>
+            </div>
+
+            {formData.length > 0 && (
+              <div className="summary-banner">
+                {formData.length}件の食材が読み取られました。必要な項目を確認して登録してください。
+              </div>
+            )}
+
+            {formData.length === 0 ? (
+              <p className="empty-text">登録対象の食材がありません。食材登録に戻ってください。</p>
+            ) : (
+              <div className="detail-cards-list">
+                {formData.map((item, index) => (
+                  <div key={item.id || index} className="detail-card">
+                    <div className="card-index-title">{index + 1}件目</div>
+
+                    <div className="card-fields-grid">
+                      {/* Name */}
+                      <div className="field-group">
+                        <label>
+                          食材名<span className="required">*</span>
+                        </label>
+                        <input
+                          type="text"
+                          value={item.name}
+                          onChange={(e) => handleChange(index, 'name', e.target.value)}
+                          placeholder="例：鮭切り身"
+                          required
+                        />
+                      </div>
+
+                      {/* Category */}
+                      <div className="field-group">
+                        <label>
+                          カテゴリー<span className="required">*</span>
+                        </label>
+                        <div className="select-wrapper">
+                          <select
+                            value={item.category}
+                            onChange={(e) => handleChange(index, 'category', e.target.value)}
+                            required
+                          >
+                            <option value="" disabled>カテゴリーを選択</option>
+                            {categories.map((cat) => (
+                              <option key={cat} value={cat}>
+                                {cat}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                      </div>
+
+                      {/* Quantity */}
+                      <div className="field-group">
+                        <label>
+                          個数<span className="required">*</span>
+                        </label>
+                        <input
+                          type="number"
+                          min="1"
+                          value={item.quantity ?? 1}
+                          onChange={(e) => handleChange(index, 'quantity', e.target.value ? Number(e.target.value) : 1)}
+                          required
+                        />
+                      </div>
+
+                      {/* Gram / ml */}
+                      <div className="field-group">
+                        <label>グラム又はml (任意)</label>
+                        <input
+                          type="number"
+                          min="0"
+                          value={item.gram ?? ''}
+                          onChange={(e) => handleChange(index, 'gram', e.target.value ? Number(e.target.value) : null)}
+                          placeholder="例：320"
+                        />
+                      </div>
+
+                      {/* Best Before Date */}
+                      <div className="field-group">
+                        <label>賞味期限</label>
+                        <input
+                          type="date"
+                          value={item.bestBeforeDate}
+                          onChange={(e) => handleChange(index, 'bestBeforeDate', e.target.value)}
+                        />
+                      </div>
+
+                      {/* Expiration Date */}
+                      <div className="field-group">
+                        <label>消費期限 (任意)</label>
+                        <input
+                          type="date"
+                          value={item.expirationDate}
+                          onChange={(e) => handleChange(index, 'expirationDate', e.target.value)}
+                        />
+                      </div>
+
+                      {/* Memo */}
+                      <div className="field-group full-width">
+                        <label>メモ (任意)</label>
+                        <textarea
+                          rows={2}
+                          value={item.memo}
+                          onChange={(e) => handleChange(index, 'memo', e.target.value)}
+                          placeholder="例：夕食に使用予定"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Bottom Actions */}
+            {formData.length > 0 && (
+              <div className="detail-actions">
+                <button
+                  type="button"
+                  className="secondary-button"
+                  onClick={onBack}
+                  disabled={isSubmitting}
+                >
+                  戻る
+                </button>
+                <button
+                  type="button"
+                  className="primary-button submit-detail-button"
+                  onClick={handleSubmit}
+                  disabled={isSubmitting}
+                >
+                  {isSubmitting ? '登録中...' : '一括で冷蔵庫に登録する'}
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+      </main>
+    </div>
+  )
+}
