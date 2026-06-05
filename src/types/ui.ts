@@ -49,6 +49,8 @@ export type Ingredient = {
   quantity?: number
   gram?: number
   expirationDate?: string | null
+  bestBeforeDate?: string | null
+  isOpened?: boolean
   memo?: string | null
 }
 

@@ -162,6 +162,8 @@ function mapInventoryRows(rows, language = 'ja') {
       gram: row.gram ?? 0,
       amount: formatAmount(row, language),
       expirationDate: row.expiration_date,
+      bestBeforeDate: ingredient?.best_before_date ?? null,
+      isOpened: ingredient?.is_opened ?? false,
       status: getExpirationStatus(row.expiration_date, language),
       memo: row.memo ?? null,
     }
@@ -204,6 +206,8 @@ function sanitizeInventoryPayload(payload) {
     quantity: Number.isFinite(quantity) && quantity > 0 ? Math.floor(quantity) : null,
     gram: Number.isFinite(gram) && gram > 0 ? Math.floor(gram) : null,
     expirationDate: sanitizeOptionalDate(payload?.expirationDate),
+    bestBeforeDate: sanitizeOptionalDate(payload?.bestBeforeDate),
+    isOpened: payload?.isOpened === true,
     memo: sanitizeText(payload?.memo) || null,
   }
 }
@@ -211,7 +215,7 @@ function sanitizeInventoryPayload(payload) {
 async function findOrCreateIngredientForInventory({ client, userId, item }) {
   const { data: existing, error: fetchError } = await client
     .from('ingredient_management')
-    .select('ingredient_id, ingredient_name, category')
+    .select('ingredient_id, ingredient_name, category, is_opened, best_before_date, expiration_date')
     .eq('user_id', userId)
     .eq('ingredient_name', item.name)
     .limit(1)
@@ -222,10 +226,24 @@ async function findOrCreateIngredientForInventory({ client, userId, item }) {
   }
 
   if (existing) {
+    const updateData = {}
     if ((existing.category ?? '') !== item.category) {
+      updateData.category = item.category
+    }
+    if (item.isOpened !== undefined && existing.is_opened !== item.isOpened) {
+      updateData.is_opened = item.isOpened
+    }
+    if (item.bestBeforeDate !== undefined && existing.best_before_date !== item.bestBeforeDate) {
+      updateData.best_before_date = item.bestBeforeDate
+    }
+    if (item.expirationDate !== undefined && existing.expiration_date !== item.expirationDate) {
+      updateData.expiration_date = item.expirationDate
+    }
+
+    if (Object.keys(updateData).length > 0) {
       await client
         .from('ingredient_management')
-        .update({ category: item.category })
+        .update(updateData)
         .eq('user_id', userId)
         .eq('ingredient_id', existing.ingredient_id)
     }
@@ -240,6 +258,9 @@ async function findOrCreateIngredientForInventory({ client, userId, item }) {
       ingredient_name: item.name,
       category: item.category,
       barcode: `manual-${Date.now()}`,
+      is_opened: item.isOpened ?? false,
+      best_before_date: item.bestBeforeDate ?? null,
+      expiration_date: item.expirationDate ?? null,
     })
     .select('ingredient_id, ingredient_name, category')
     .single()
@@ -270,7 +291,10 @@ export async function getInventoryForUser(requestedUserId, language = 'ja') {
         ingredient_id,
         ingredient_name,
         category,
-        barcode
+        barcode,
+        is_opened,
+        best_before_date,
+        expiration_date
       )
     `,
     )
@@ -303,7 +327,7 @@ export async function createInventoryItemForUser({ userId: requestedUserId, item
     quantity: nextItem.quantity,
     gram: nextItem.gram,
     purchase_date: new Date().toISOString().split('T')[0],
-    expiration_date: nextItem.expirationDate,
+    expiration_date: nextItem.expirationDate || nextItem.bestBeforeDate || null,
     memo: nextItem.memo,
   })
 
@@ -340,7 +364,7 @@ export async function updateInventoryItemForUser({
       ingredient_id: ingredient.ingredient_id,
       quantity: nextItem.quantity,
       gram: nextItem.gram,
-      expiration_date: nextItem.expirationDate,
+      expiration_date: nextItem.expirationDate || nextItem.bestBeforeDate || null,
       memo: nextItem.memo,
     })
     .eq('user_id', userId)

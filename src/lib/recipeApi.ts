@@ -31,7 +31,7 @@ async function readJson<T>(response: Response): Promise<T> {
   }
 
   if (!payload.ok) {
-    throw new Error(payload.message ?? response.statusText)
+    throw new Error((payload as { message?: string }).message ?? response.statusText)
   }
 
   return payload as T
@@ -63,6 +63,8 @@ export type InventoryMutationInput = {
   quantity?: number | null
   gram?: number | null
   expirationDate?: string | null
+  bestBeforeDate?: string | null
+  isOpened?: boolean | null
   memo?: string | null
 }
 

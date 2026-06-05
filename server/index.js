@@ -407,7 +407,7 @@ export async function handleApiRequest(request, response) {
   }
 
   if (request.method === 'POST' && url.pathname === '/api/receipts/import-detail') {
-    await handleReceiptImportDetail(request, response)
+    await handleReceiptImportDetail(request, response, authUser.id)
     return
   }
 
@@ -1054,12 +1054,12 @@ async function handleReceiptImport(request, response, userId) {
   }
 }
 
-async function handleReceiptImportDetail(request, response) {
+async function handleReceiptImportDetail(request, response, userId) {
   try {
     const body = await readJsonBody(request)
     const result = await importReceiptItemsDetail({
       items: body?.items,
-      userId: body?.userId,
+      userId,
     })
 
     sendJson(response, 200, {

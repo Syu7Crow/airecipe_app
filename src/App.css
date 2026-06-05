@@ -2,6 +2,7 @@
   min-height: 100svh;
   background: var(--app-bg);
 }
+
 .topbar {
   position: sticky;
   top: 0;
@@ -384,7 +385,7 @@ button:disabled {
   margin-top: 36px;
 }
 
-.summary-grid + .dashboard-grid {
+.summary-grid+.dashboard-grid {
   margin-top: 24px;
 }
 
@@ -1379,14 +1380,14 @@ button:disabled {
 }
 
 .settings-field label,
-.settings-field > span,
+.settings-field>span,
 .settings-fieldset legend {
   color: var(--ink);
   font-weight: 900;
 }
 
 .settings-field label span,
-.settings-field > label span,
+.settings-field>label span,
 .settings-fieldset p {
   display: block;
   margin-top: 4px;
@@ -1779,9 +1780,8 @@ button:disabled {
 .category-title {
   margin: 0;
   padding: 14px 20px;
-  background: #64d2ec;
-  /* 明るい水色 */
-  color: var(--ink);
+  background: var(--accent);
+  color: #ffffff;
   font-size: 18px;
   font-weight: 900;
   border-bottom: 1px solid var(--line);
@@ -1802,6 +1802,41 @@ button:disabled {
   padding: 16px 20px;
   font-size: 14px;
   border-bottom: 1px solid var(--line);
+}
+
+/* 冷蔵庫テーブルの特定の列幅 */
+.fridge-table th:nth-child(1),
+.fridge-table td:nth-child(1) {
+  width: 20%;
+}
+
+.fridge-table th:nth-child(2),
+.fridge-table td:nth-child(2) {
+  width: 15%;
+  white-space: nowrap;
+}
+
+.fridge-table th:nth-child(3),
+.fridge-table td:nth-child(3) {
+  width: 10%;
+  white-space: nowrap;
+}
+
+.fridge-table th:nth-child(4),
+.fridge-table td:nth-child(4) {
+  width: 10%;
+  white-space: nowrap;
+}
+
+.fridge-table th:nth-child(5),
+.fridge-table td:nth-child(5) {
+  width: 10%;
+}
+
+.fridge-table th:nth-child(6),
+.fridge-table td:nth-child(6) {
+  width: 10%;
+  white-space: nowrap;
 }
 
 .fridge-table th {
@@ -1826,10 +1861,12 @@ button:disabled {
 }
 
 .ingredient-name-cell {
-  display: flex;
-  align-items: center;
-  gap: 10px;
   font-weight: 700;
+}
+
+.expiration-warning {
+  color: var(--danger);
+  font-weight: bold;
 }
 
 .ingredient-name {
@@ -2265,6 +2302,7 @@ button:disabled {
   .card-fields-grid {
     grid-template-columns: repeat(2, 1fr);
   }
+
   .field-group.full-width {
     grid-column: span 2;
   }
@@ -2274,15 +2312,17 @@ button:disabled {
   .card-fields-grid {
     grid-template-columns: 1fr;
   }
+
   .field-group.full-width {
     grid-column: span 1;
   }
+
   .detail-actions {
     flex-direction: column-reverse;
     gap: 12px;
   }
+
   .detail-actions button {
     width: 100%;
   }
 }
-

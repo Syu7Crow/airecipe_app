@@ -27,6 +27,8 @@ type IngredientFormState = {
   quantity: string
   gram: string
   expirationDate: string
+  bestBeforeDate: string
+  isOpened: boolean
   memo: string
 }
 
@@ -36,6 +38,8 @@ const emptyForm: IngredientFormState = {
   quantity: '',
   gram: '',
   expirationDate: '',
+  bestBeforeDate: '',
+  isOpened: false,
   memo: '',
 }
 
@@ -81,7 +85,7 @@ function buildSummary(ingredients: Ingredient[]): Summary {
   return {
     totalCount: ingredients.length,
     uniqueNamesCount: new Set(ingredients.map((item) => item.name)).size,
-    openedCount: 0,
+    openedCount: ingredients.filter((item) => item.isOpened).length,
     nearExpirationCount: ingredients.filter((item) =>
       isNearExpiration(item.expirationDate),
     ).length,
@@ -96,6 +100,8 @@ function buildFormFromIngredient(ingredient: Ingredient): IngredientFormState {
     quantity: ingredient.quantity ? String(ingredient.quantity) : '',
     gram: ingredient.gram ? String(ingredient.gram) : '',
     expirationDate: ingredient.expirationDate ?? '',
+    bestBeforeDate: ingredient.bestBeforeDate ?? '',
+    isOpened: ingredient.isOpened ?? false,
     memo: ingredient.memo ?? '',
   }
 }
@@ -108,6 +114,8 @@ function toMutationInput(form: IngredientFormState): InventoryMutationInput {
     quantity: form.quantity ? Number(form.quantity) : null,
     gram: form.gram ? Number(form.gram) : null,
     expirationDate: form.expirationDate || null,
+    bestBeforeDate: form.bestBeforeDate || null,
+    isOpened: form.isOpened,
     memo: form.memo.trim() || null,
   }
 }
@@ -271,6 +279,42 @@ export function FridgePage({
     }
   }
 
+  async function handleToggleOpened(inventory: Ingredient) {
+    if (!inventory.inventoryId) {
+      return
+    }
+
+    setIsSaving(true)
+    setStatusMessage('')
+    setError(null)
+
+    try {
+      const input: InventoryMutationInput = {
+        inventoryId: inventory.inventoryId,
+        name: inventory.name,
+        category: inventory.category,
+        quantity: inventory.quantity ?? null,
+        gram: inventory.gram ?? null,
+        expirationDate: inventory.expirationDate ?? null,
+        bestBeforeDate: inventory.bestBeforeDate ?? null,
+        isOpened: !inventory.isOpened,
+        memo: inventory.memo,
+      }
+
+      const result = await updateInventoryItem(input)
+      setIngredients(result.inventory)
+      setStatusMessage(t('fridge.status.updated'))
+    } catch (toggleError) {
+      setError(
+        toggleError instanceof Error
+          ? toggleError.message
+          : t('fridge.status.saveFailed'),
+      )
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
   if (loading) {
     return (
       <div className="app-shell">
@@ -366,9 +410,8 @@ export function FridgePage({
             <button
               key={category}
               type="button"
-              className={`filter-pill ${
-                displayActiveCategory === category ? 'active' : ''
-              }`}
+              className={`filter-pill ${displayActiveCategory === category ? 'active' : ''
+                }`}
               onClick={() => setActiveCategory(category)}
             >
               {category === allCategoryKey ? t('fridge.filter.all') : category}
@@ -397,8 +440,9 @@ export function FridgePage({
                         <tr>
                           <th>{t('fridge.table.ingredient')}</th>
                           <th>{t('fridge.table.stock')}</th>
-                          <th>{t('fridge.table.memo')}</th>
+                          <th>{t('fridge.table.bestBefore')}</th>
                           <th>{t('fridge.table.expiration')}</th>
+                          <th>{t('fridge.table.memo')}</th>
                           <th>{t('fridge.table.actions')}</th>
                         </tr>
                       </thead>
@@ -409,31 +453,53 @@ export function FridgePage({
                             item.ingredientId ??
                             `${item.name}-${index}`
                           const isWarning = isNearExpiration(
-                            item.expirationDate,
+                            item.expirationDate || item.bestBeforeDate
                           )
+                          const unopenedText = language === 'ja' ? '未開封' : language === 'fr' ? 'Non ouvert' : 'Unopened'
 
                           return (
                             <tr key={rowKey}>
                               <td className="ingredient-name-cell">
-                                <span className="ingredient-name">
-                                  {item.name}
-                                </span>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                  <span className="ingredient-name">
+                                    {item.name}
+                                  </span>
+                                  <button
+                                    type="button"
+                                    className={`opened-badge-button ${item.isOpened ? 'opened' : 'unopened'}`}
+                                    onClick={() => void handleToggleOpened(item)}
+                                    title={item.isOpened ? 'Click to mark unopened' : 'Click to mark opened'}
+                                    style={{
+                                      padding: '2px 8px',
+                                      borderRadius: '12px',
+                                      fontSize: '0.72rem',
+                                      border: 'none',
+                                      cursor: 'pointer',
+                                      transition: 'all 0.2s',
+                                      backgroundColor: item.isOpened ? 'rgba(74, 222, 128, 0.2)' : 'rgba(156, 163, 175, 0.1)',
+                                      color: item.isOpened ? '#15803d' : '#4b5563',
+                                      fontWeight: 'bold',
+                                    }}
+                                    disabled={isSaving}
+                                  >
+                                    {item.isOpened ? t('fridge.form.isOpened') : unopenedText}
+                                  </button>
+                                </div>
                               </td>
                               <td>
                                 <span className="amount-text">
                                   {item.amount}
                                 </span>
                               </td>
-                              <td>{item.memo ?? '-'}</td>
-                              <td className="expiration-cell">
-                                <span
-                                  className={
-                                    isWarning ? 'expiration-warning' : ''
-                                  }
-                                >
+                              <td>
+                                {formatDate(item.bestBeforeDate, language)}
+                              </td>
+                              <td>
+                                <span className={isWarning ? 'expiration-warning' : ''}>
                                   {formatDate(item.expirationDate, language)}
                                 </span>
                               </td>
+                              <td>{item.memo ?? '-'}</td>
                               <td>
                                 <div className="fridge-row-actions">
                                   <button
@@ -524,6 +590,16 @@ export function FridgePage({
                 />
               </label>
               <label>
+                <span>{t('fridge.form.bestBefore')}</span>
+                <input
+                  type="date"
+                  value={formState.bestBeforeDate}
+                  onChange={(event) =>
+                    updateFormField('bestBeforeDate', event.target.value)
+                  }
+                />
+              </label>
+              <label>
                 <span>{t('fridge.form.expiration')}</span>
                 <input
                   type="date"
@@ -540,6 +616,19 @@ export function FridgePage({
                   onChange={(event) => updateFormField('memo', event.target.value)}
                   placeholder={t('fridge.form.memoPlaceholder')}
                 />
+              </label>
+              <label style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: '8px', cursor: 'pointer', gridColumn: 'span 2', padding: '8px 0' }}>
+                <input
+                  type="checkbox"
+                  checked={formState.isOpened}
+                  onChange={(event) =>
+                    setFormState((curr) => ({ ...curr, isOpened: event.target.checked }))
+                  }
+                  style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+                />
+                <span style={{ fontSize: '0.9rem', userSelect: 'none', color: '#374151', fontWeight: '500' }}>
+                  {t('fridge.form.isOpened')}
+                </span>
               </label>
             </div>
 
