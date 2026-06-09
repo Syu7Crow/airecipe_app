@@ -322,6 +322,13 @@ const jaMessages = {
   'gemini.outputTitle': 'レスポンス',
   'gemini.noResponse': 'まだレスポンスはありません。',
   'gemini.responseImageAlt': 'Geminiから返された画像 {number}',
+  'notification.title': '期限が近い食材',
+  'notification.none': '期限が近い食材はありません',
+  'notification.expiring': '{name}の期限が近づいています',
+  'notification.daysRemaining': 'あと{days}日',
+  'notification.today': '今日まで',
+  'notification.yesterdayOrBefore': '期限切れ',
+  'notification.tomorrow': '明日まで',
 } as const
 
 export type MessageKey = keyof typeof jaMessages
@@ -641,6 +648,13 @@ const enMessages: Record<MessageKey, string> = {
   'gemini.outputTitle': 'Response',
   'gemini.noResponse': 'No response yet.',
   'gemini.responseImageAlt': 'Image returned from Gemini {number}',
+  'notification.title': 'Expiring Ingredients',
+  'notification.none': 'No ingredients are expiring soon',
+  'notification.expiring': '{name} is expiring soon',
+  'notification.daysRemaining': '{days} day(s) left',
+  'notification.today': 'Today',
+  'notification.yesterdayOrBefore': 'Expired',
+  'notification.tomorrow': 'Tomorrow',
 }
 
 const frMessages: Record<MessageKey, string> = {
@@ -964,6 +978,13 @@ const frMessages: Record<MessageKey, string> = {
   'gemini.outputTitle': 'Réponse',
   'gemini.noResponse': 'Aucune réponse pour le moment.',
   'gemini.responseImageAlt': 'Image renvoyée par Gemini {number}',
+  'notification.title': 'Ingrédients Périmant Bientôt',
+  'notification.none': 'Aucun ingrédient bientôt périmé',
+  'notification.expiring': '{name} périme bientôt',
+  'notification.daysRemaining': '{days} jour(s) restant(s)',
+  'notification.today': 'Aujourd\'hui',
+  'notification.yesterdayOrBefore': 'Périmé',
+  'notification.tomorrow': 'Demain',
 }
 
 const messages: Record<LanguageCode, Record<MessageKey, string>> = {
