@@ -183,14 +183,6 @@ export function HomePage({
     }
   }, [language, t])
 
-  function navigateToReceipt() {
-    onNavigate?.('receipt')
-  }
-
-  function navigateToFridge() {
-    onNavigate?.('fridge')
-  }
-
   async function handleGenerateRecipe() {
     if (!ingredients.length) {
       setStatusMessage(t('home.status.generateEmpty'))
@@ -264,8 +256,8 @@ export function HomePage({
         <HeroPanel
           isGenerating={isGenerating}
           onGenerateRecipe={handleGenerateRecipe}
-          onAddIngredient={navigateToFridge}
-          onScanReceipt={navigateToReceipt}
+          onAddIngredient={() => onNavigate?.('fridge')}
+          onScanReceipt={() => onNavigate?.('ingredient-register')}
           onShowRecipes={() => onNavigate?.('history')}
         />
 
@@ -280,7 +272,7 @@ export function HomePage({
         <div className="dashboard-grid">
           <IngredientsPanel
             ingredients={ingredients}
-            onAddIngredient={navigateToReceipt}
+            onAddIngredient={() => onNavigate?.('ingredient-register')}
           />
           <RecipesPanel
             recipes={recipes}

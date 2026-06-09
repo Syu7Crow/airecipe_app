@@ -2012,6 +2012,213 @@ button:disabled {
   }
 }
 
+/* --- Ingredient Register Page --- */
+.ingredient-register-page {
+  width: min(720px, calc(100% - 40px));
+  margin: 0 auto;
+  padding: 34px 0 56px;
+}
+
+.ingredient-register-page__lead {
+  margin: 8px 0 0;
+  color: var(--muted);
+  font-size: 15px;
+}
+
+.register-card__title {
+  margin: 0 0 4px;
+  font-size: 16px;
+  font-weight: 900;
+}
+
+.register-card__desc {
+  margin: 0 0 20px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.register-method-labels {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin-bottom: 24px;
+}
+
+.register-method-labels--two {
+  grid-template-columns: 1fr 1fr;
+}
+
+.register-method-label {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 16px 10px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #fff;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 800;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color 0.2s ease, background 0.2s ease, color 0.2s ease;
+}
+
+.register-method-label:hover {
+  border-color: var(--subtle);
+  color: var(--ink);
+}
+
+.register-method-label.is-active {
+  border-color: var(--ink);
+  background: var(--ink);
+  color: #fff;
+}
+
+.register-method-label__icon {
+  font-size: 24px;
+  line-height: 1;
+}
+
+.register-method-label__sub {
+  display: block;
+  margin-top: 2px;
+  font-size: 11px;
+  font-weight: 600;
+  opacity: 0.85;
+}
+
+.register-field {
+  margin-bottom: 20px;
+}
+
+.register-field label {
+  display: block;
+  margin-bottom: 8px;
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.register-field textarea {
+  width: 100%;
+  min-height: 120px;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--ink);
+  font-size: 15px;
+  resize: vertical;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.register-field textarea:focus {
+  outline: none;
+  border-color: var(--ink);
+  box-shadow: 0 0 0 3px rgba(51, 51, 51, 0.1);
+}
+
+.register-field__hint {
+  display: block;
+  margin-top: 6px;
+  color: var(--subtle);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.register-form-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 24px;
+}
+
+.register-image-lead {
+  margin: 0 0 16px;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.register-upload-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+.register-upload-zone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 200px;
+  padding: 24px 16px;
+  border: 2px dashed var(--line);
+  border-radius: 10px;
+  background: var(--surface-soft);
+  color: var(--muted);
+  font-size: 14px;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color 0.2s ease, background 0.2s ease;
+}
+
+.register-upload-zone:hover {
+  border-color: var(--subtle);
+  background: #f3f3f3;
+}
+
+.register-upload-zone__badge {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 999px;
+  background: #fff;
+  border: 1px solid var(--line);
+  color: var(--ink);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.register-upload-zone strong {
+  color: var(--ink);
+  font-size: 15px;
+}
+
+.register-upload-zone span {
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.register-upload-zone__note {
+  color: var(--subtle);
+  font-size: 11px !important;
+}
+
+.register-image-mock {
+  margin: 16px 0 0;
+  color: var(--subtle);
+  font-size: 12px;
+  text-align: center;
+}
+
+@media (max-width: 700px) {
+  .register-upload-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .register-form-actions {
+    flex-direction: column;
+  }
+
+  .register-form-actions .primary-button,
+  .register-form-actions .secondary-button {
+    width: 100%;
+  }
+}
+
 /* --- Receipt Detail Register Page Styling --- */
 .receipt-detail-page {
   width: min(980px, calc(100% - 40px));

@@ -8,6 +8,7 @@ import { RecipeDetailPage } from './pages/RecipeDetailPage'
 import { CookingHistoryPage } from './pages/CookingHistoryPage'
 import { ReceiptScanPage } from './pages/ReceiptScanPage'
 import { GeminiTestPage } from './pages/GeminiTestPage'
+import { IngredientRegisterPage } from './pages/IngredientRegisterPage'
 import { ReceiptDetailRegisterPage } from './pages/ReceiptDetailRegisterPage'
 import { SettingsPage } from './pages/SettingsPage'
 import LoginScreen from './pages/LoginScreen'
@@ -39,6 +40,14 @@ function getPageFromPath(): AppDestination {
 
   if (window.location.pathname === '/receipt') {
     return 'receipt'
+  }
+
+  if (window.location.pathname === '/ingredient-register') {
+    return 'ingredient-register'
+  }
+
+  if (window.location.pathname === '/receipt-detail') {
+    return 'receipt-detail'
   }
 
   if (window.location.pathname === '/test') {
@@ -121,6 +130,17 @@ function createOAuthSessionOnce(tokens: {
   return oauthSessionRequest.promise
 }
 
+function namesToReceiptCandidates(names: string[]): ReceiptIngredientCandidate[] {
+  return names.map((name, index) => ({
+    id: `manual-${index}`,
+    name,
+    category: 'その他',
+    quantity: 1,
+    gram: null,
+    selected: true,
+  }))
+}
+
 function App() {
   const [currentPage, setCurrentPage] = useState<Page>(getPageFromPath)
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(null)
@@ -128,6 +148,8 @@ function App() {
   const [selectedRecipe, setSelectedRecipe] = useState<Recipe | null>(null)
   const [recipeBackPage, setRecipeBackPage] = useState<AppDestination>('home')
   const [selectedReceiptItems, setSelectedReceiptItems] = useState<ReceiptIngredientCandidate[]>([])
+  const [receiptDetailBackPage, setReceiptDetailBackPage] =
+    useState<AppDestination>('receipt')
   const [passwordResetTokens, setPasswordResetTokens] =
     useState<AuthTokenPair | null>(null)
 
@@ -269,6 +291,12 @@ function App() {
     setCurrentPage('recipe')
   }
 
+  function handleContinueIngredientRegister(names: string[]) {
+    setSelectedReceiptItems(namesToReceiptCandidates(names))
+    setReceiptDetailBackPage('ingredient-register')
+    handleNavigate('receipt-detail')
+  }
+
   if (isAuthLoading) {
     return null
   }
@@ -311,8 +339,19 @@ function App() {
         onLogout={handleLogout}
         onProceedToDetail={(items: ReceiptIngredientCandidate[]) => {
           setSelectedReceiptItems(items)
+          setReceiptDetailBackPage('receipt')
           handleNavigate('receipt-detail')
         }}
+      />
+    )
+  }
+
+  if (currentPage === 'ingredient-register') {
+    return (
+      <IngredientRegisterPage
+        onNavigate={handleNavigate}
+        onLogout={handleLogout}
+        onContinue={handleContinueIngredientRegister}
       />
     )
   }
@@ -321,7 +360,7 @@ function App() {
     return (
       <ReceiptDetailRegisterPage
         items={selectedReceiptItems}
-        onBack={() => handleNavigate('receipt')}
+        onBack={() => handleNavigate(receiptDetailBackPage)}
         onNavigate={handleNavigate}
         onLogout={handleLogout}
       />

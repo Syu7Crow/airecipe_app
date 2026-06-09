@@ -189,12 +189,6 @@ export function FridgePage({
     }
   }, [language, t])
 
-  function openAddForm() {
-    setFormState(emptyForm)
-    setFormError('')
-    setIsFormOpen(true)
-  }
-
   function openEditForm(ingredient: Ingredient) {
     setFormState(buildFormFromIngredient(ingredient))
     setFormError('')
@@ -356,7 +350,7 @@ export function FridgePage({
             <button
               type="button"
               className="primary-button back-home-button"
-              onClick={openAddForm}
+              onClick={() => onNavigate('ingredient-register')}
             >
               <Icon name="plus" />
               <span>{t('fridge.addIngredient')}</span>

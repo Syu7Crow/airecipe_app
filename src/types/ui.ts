@@ -33,6 +33,7 @@ export type AppDestination =
   | 'fridge'
   | 'history'
   | 'receipt'
+  | 'ingredient-register'
   | 'test'
   | 'settings'
   | 'register'
