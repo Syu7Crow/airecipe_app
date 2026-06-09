@@ -32,7 +32,7 @@ async function readJson<T>(response: Response): Promise<T> {
   }
 
   if (!payload.ok) {
-    throw new Error(payload.message ?? response.statusText)
+    throw new Error((payload as { message?: string }).message ?? response.statusText)
   }
 
   return payload as T

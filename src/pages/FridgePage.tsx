@@ -81,6 +81,29 @@ function formatDate(value: string | null | undefined, language: string) {
   }).format(date)
 }
 
+function formatStock(
+  quantity: number | null | undefined,
+  gram: number | null | undefined,
+  language: string,
+) {
+  const parts: string[] = []
+
+  if (quantity !== null && quantity !== undefined && quantity > 0) {
+    const unit = language === 'ja' ? '個' : 'pc(s)'
+    parts.push(`${quantity}${unit}`)
+  }
+
+  if (gram !== null && gram !== undefined && gram > 0) {
+    parts.push(`${gram}g`)
+  }
+
+  if (parts.length === 0) {
+    return '-'
+  }
+
+  return parts.join(' / ')
+}
+
 function buildSummary(ingredients: Ingredient[]): Summary {
   return {
     totalCount: ingredients.length,
@@ -488,7 +511,7 @@ export function FridgePage({
                               </td>
                               <td>
                                 <span className="amount-text">
-                                  {item.amount}
+                                  {formatStock(item.quantity, item.gram, language)}
                                 </span>
                               </td>
                               <td>
