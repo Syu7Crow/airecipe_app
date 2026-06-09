@@ -87,7 +87,7 @@ function buildSummary(ingredients: Ingredient[]): Summary {
     uniqueNamesCount: new Set(ingredients.map((item) => item.name)).size,
     openedCount: ingredients.filter((item) => item.isOpened).length,
     nearExpirationCount: ingredients.filter((item) =>
-      isNearExpiration(item.expirationDate),
+      isNearExpiration(item.expirationDate) || isNearExpiration(item.bestBeforeDate),
     ).length,
   }
 }
@@ -446,18 +446,24 @@ export function FridgePage({
                             item.inventoryId ??
                             item.ingredientId ??
                             `${item.name}-${index}`
-                          const isWarning = isNearExpiration(
-                            item.expirationDate || item.bestBeforeDate
-                          )
+                          const isWarning =
+                            isNearExpiration(item.expirationDate) ||
+                            isNearExpiration(item.bestBeforeDate)
                           const unopenedText = language === 'ja' ? '未開封' : language === 'fr' ? 'Non ouvert' : 'Unopened'
 
                           return (
-                            <tr key={rowKey}>
+                            <tr key={rowKey} className={isWarning ? 'near-expiration-row' : ''}>
                               <td className="ingredient-name-cell">
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                                   <span className="ingredient-name">
                                     {item.name}
                                   </span>
+                                  {isWarning && (
+                                    <span className="expiry-alert">
+                                      <Icon name="bell" />
+                                      {t('fridge.summary.nearExpiration')}
+                                    </span>
+                                  )}
                                   <button
                                     type="button"
                                     className={`opened-badge-button ${item.isOpened ? 'opened' : 'unopened'}`}
@@ -486,10 +492,12 @@ export function FridgePage({
                                 </span>
                               </td>
                               <td>
-                                {formatDate(item.bestBeforeDate, language)}
+                                <span className={isNearExpiration(item.bestBeforeDate) ? 'expiration-warning' : ''}>
+                                  {formatDate(item.bestBeforeDate, language)}
+                                </span>
                               </td>
                               <td>
-                                <span className={isWarning ? 'expiration-warning' : ''}>
+                                <span className={isNearExpiration(item.expirationDate) ? 'expiration-warning' : ''}>
                                   {formatDate(item.expirationDate, language)}
                                 </span>
                               </td>
