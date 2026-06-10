@@ -10,7 +10,7 @@
     "dev": "node scripts/dev.js",
     "dev:vite": "vite",
     "dev:api": "node server/index.js",
-    "build": "node scripts/vercel-source-guard.js && vite build --emptyOutDir",
+    "build": "node scripts/vercel-source-guard.js && rm -rf dist node_modules/.vite node_modules/.cache .vite .vercel/output && vite build --emptyOutDir --force",
     "typecheck": "tsc -b",
     "lint": "eslint .",
     "preview": "vite preview"
