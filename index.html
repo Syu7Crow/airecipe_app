@@ -8,10 +8,18 @@
     <title>あいくっく</title>
   </head>
   <body>
+    <script>
+  navigator.serviceWorker?.getRegistrations?.().then((registrations) => {
+    registrations.forEach((registration) => registration.unregister())
+  })
+
+  caches?.keys?.().then((keys) => {
+    keys.forEach((key) => caches.delete(key))
+  })
+
+  localStorage.removeItem('ai-recipe-language')
+  </script>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
-    <div style="position:fixed;top:0;left:0;z-index:999999;background:red;color:white;padding:8px">
-  BUILD VERSION d28bc76
-</div>
-  </body>
+    </body>
 </html>
