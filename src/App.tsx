@@ -352,7 +352,15 @@ function App() {
 
   if (!currentUser) {
     if (currentPage === 'register') {
-      return <RegisterPage onAuthenticated={handleAuthenticated} />
+      return (
+        <RegisterPage
+          onAuthenticated={handleAuthenticated}
+          onNavigateToLogin={() => {
+            pushPath('/login')
+            setCurrentPage('login')
+          }}
+        />
+      )
     }
 
     return (

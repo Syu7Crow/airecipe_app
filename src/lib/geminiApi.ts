@@ -8,6 +8,14 @@ type ApiResponse<T> =
 export type GeminiGenerateResult = {
   model: string
   attemptedModels?: string[]
+  skippedModels?: string[]
+  usage?: Array<{
+    model: string
+    limit: number
+    used: number
+    remaining: number
+    resetInMs: number
+  }>
   text: string
   images: Array<{
     mimeType: string

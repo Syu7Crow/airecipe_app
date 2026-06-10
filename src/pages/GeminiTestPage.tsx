@@ -9,8 +9,6 @@ type GeminiTestPageProps = {
   onLogout?: () => void | Promise<void>
 }
 
-const geminiTestModel = 'gemini-2.5-flash-lite'
-
 function readFileAsDataUrl(file: File) {
   return new Promise<string>((resolve, reject) => {
     const reader = new FileReader()
@@ -83,7 +81,6 @@ export function GeminiTestPage({
         prompt,
         imageBase64,
         mimeType: imageMimeType,
-        model: geminiTestModel,
       })
 
       setResponseText(result.text || t('gemini.noText'))
@@ -133,7 +130,7 @@ export function GeminiTestPage({
 
             <div className="test-model-label">
               <span>{t('gemini.model')}</span>
-              <strong>{geminiTestModel}</strong>
+              <strong>auto fallback</strong>
             </div>
 
             <label>

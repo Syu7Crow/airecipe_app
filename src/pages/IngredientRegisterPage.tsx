@@ -17,8 +17,6 @@ type IngredientRegisterPageProps = {
   onContinueCandidates?: (items: ReceiptIngredientCandidate[]) => void
 }
 
-const foodRecognitionModel = 'gemini-2.5-flash-lite'
-
 const foodRecognitionPrompt = `画像に写っている食品・食材だけを抽出してください。
 レシート、値札、食器、調理器具、背景、人物は食材として扱わないでください。
 返答はJSONのみ。Markdown、説明文、コードフェンスは禁止。
@@ -218,7 +216,6 @@ export function IngredientRegisterPage({
         prompt: foodRecognitionPrompt,
         imageBase64,
         mimeType: file.type || 'image/jpeg',
-        model: foodRecognitionModel,
         responseMimeType: 'application/json',
       })
       const items = normalizeFoodCandidates(

@@ -1,8 +1,16 @@
 import './env.js'
 
 const geminiApiKey = process.env.GEMINI_API_KEY
-export const defaultGeminiModel = 'gemini-2.5-flash-lite'
+export const geminiModelQueue = [
+  { model: 'gemini-3.5-flash', requestsPerMinute: 5 },
+  { model: 'gemini-3-flash-preview', requestsPerMinute: 5 },
+  { model: 'gemini-2.5-flash', requestsPerMinute: 5 },
+  { model: 'gemini-2.5-flash-lite', requestsPerMinute: 10 },
+]
+export const defaultGeminiModel = geminiModelQueue[0].model
 const geminiBaseUrl = 'https://generativelanguage.googleapis.com/v1beta'
+const geminiRateWindowMs = 60 * 1000
+const geminiUsageByModel = new Map()
 
 export function checkGeminiConnection() {
   if (!geminiApiKey) {
@@ -42,7 +50,87 @@ function extractInlineImages(parts = []) {
     }))
 }
 
+function pruneModelUsage(model, now = Date.now()) {
+  const timestamps = geminiUsageByModel.get(model) ?? []
+  const freshTimestamps = timestamps.filter(
+    (timestamp) => now - timestamp < geminiRateWindowMs,
+  )
+
+  geminiUsageByModel.set(model, freshTimestamps)
+  return freshTimestamps
+}
+
+function getModelLimit(model) {
+  return (
+    geminiModelQueue.find((item) => item.model === model)?.requestsPerMinute ??
+    5
+  )
+}
+
+function getModelUsage(model, now = Date.now()) {
+  const timestamps = pruneModelUsage(model, now)
+  const limit = getModelLimit(model)
+  const oldestTimestamp = timestamps[0]
+  const resetInMs = oldestTimestamp
+    ? Math.max(0, geminiRateWindowMs - (now - oldestTimestamp))
+    : 0
+
+  return {
+    model,
+    limit,
+    used: timestamps.length,
+    remaining: Math.max(0, limit - timestamps.length),
+    resetInMs,
+  }
+}
+
+function reserveModelUsage(model) {
+  const now = Date.now()
+  const usage = getModelUsage(model, now)
+
+  if (usage.remaining <= 0) {
+    return false
+  }
+
+  const timestamps = geminiUsageByModel.get(model) ?? []
+  timestamps.push(now)
+  geminiUsageByModel.set(model, timestamps)
+  return true
+}
+
+export function getGeminiUsageSnapshot() {
+  const now = Date.now()
+
+  return geminiModelQueue.map((item) => getModelUsage(item.model, now))
+}
+
+function createRateLimitError(attemptedModels, skippedModels, errors) {
+  const usage = getGeminiUsageSnapshot()
+  const nextResetInMs = usage
+    .map((item) => item.resetInMs)
+    .filter((value) => value > 0)
+    .sort((a, b) => a - b)[0] ?? geminiRateWindowMs
+  const error = new Error('All Gemini models are currently rate limited or failed')
+
+  error.statusCode = errors.length ? 502 : 429
+  error.attemptedModels = attemptedModels
+  error.skippedModels = skippedModels
+  error.modelErrors = errors
+  error.usage = usage
+  error.retryAfterMs = nextResetInMs
+  return error
+}
+
 async function requestGeminiModel({ model, body }) {
+  if (!reserveModelUsage(model)) {
+    const usage = getModelUsage(model)
+    const error = new Error(`Gemini model rate limit reached: ${model}`)
+    error.statusCode = 429
+    error.model = model
+    error.usage = usage
+    throw error
+  }
+
   const endpoint = `${geminiBaseUrl}/models/${encodeURIComponent(
     model,
   )}:generateContent?key=${encodeURIComponent(geminiApiKey)}`
@@ -73,7 +161,7 @@ export async function generateGeminiContent({
   imageBase64,
   mimeType,
   responseMimeType,
-  model = defaultGeminiModel,
+  model,
 }) {
   if (!geminiApiKey) {
     throw new Error('GEMINI_API_KEY is required for Gemini operations')
@@ -109,34 +197,82 @@ export async function generateGeminiContent({
     }
   }
 
-  let payload
+  const candidateModels = model
+    ? [
+        model,
+        ...geminiModelQueue
+          .map((item) => item.model)
+          .filter((candidateModel) => candidateModel !== model),
+      ]
+    : geminiModelQueue.map((item) => item.model)
+  const attemptedModels = []
+  const skippedModels = []
+  const errors = []
 
-  try {
-    payload = await requestGeminiModel({
-      model,
-      body,
-    })
-  } catch (error) {
-    const message = String(error?.message ?? '')
-
-    if (!responseMimeType || !/responseMimeType|generationConfig|mime/i.test(message)) {
-      throw error
+  for (const candidateModel of candidateModels) {
+    if (getModelUsage(candidateModel).remaining <= 0) {
+      skippedModels.push(candidateModel)
+      continue
     }
 
-    const { generationConfig, ...bodyWithoutGenerationConfig } = body
-    void generationConfig
-    payload = await requestGeminiModel({
-      model,
-      body: bodyWithoutGenerationConfig,
-    })
+    try {
+      attemptedModels.push(candidateModel)
+      const payload = await requestGeminiModel({
+        model: candidateModel,
+        body,
+      })
+      const outputParts = payload?.candidates?.[0]?.content?.parts ?? []
+
+      return {
+        model: candidateModel,
+        attemptedModels,
+        skippedModels,
+        usage: getGeminiUsageSnapshot(),
+        text: extractText(outputParts),
+        images: extractInlineImages(outputParts),
+        raw: payload,
+      }
+    } catch (error) {
+      const message = String(error?.message ?? '')
+
+      if (!responseMimeType || !/responseMimeType|generationConfig|mime/i.test(message)) {
+        errors.push({
+          model: candidateModel,
+          message,
+          statusCode: error?.statusCode ?? null,
+        })
+        continue
+      }
+
+      const { generationConfig, ...bodyWithoutGenerationConfig } = body
+      void generationConfig
+
+      try {
+        attemptedModels.push(candidateModel)
+        const payload = await requestGeminiModel({
+          model: candidateModel,
+          body: bodyWithoutGenerationConfig,
+        })
+        const outputParts = payload?.candidates?.[0]?.content?.parts ?? []
+
+        return {
+          model: candidateModel,
+          attemptedModels,
+          skippedModels,
+          usage: getGeminiUsageSnapshot(),
+          text: extractText(outputParts),
+          images: extractInlineImages(outputParts),
+          raw: payload,
+        }
+      } catch (retryError) {
+        errors.push({
+          model: candidateModel,
+          message: String(retryError?.message ?? ''),
+          statusCode: retryError?.statusCode ?? null,
+        })
+      }
+    }
   }
 
-  const outputParts = payload?.candidates?.[0]?.content?.parts ?? []
-
-  return {
-    model,
-    text: extractText(outputParts),
-    images: extractInlineImages(outputParts),
-    raw: payload,
-  }
+  throw createRateLimitError(attemptedModels, skippedModels, errors)
 }

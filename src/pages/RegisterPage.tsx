@@ -7,9 +7,13 @@ import { useI18n } from "../lib/useI18n";
 
 type RegisterPageProps = {
   onAuthenticated?: (user: AuthUser) => void;
+  onNavigateToLogin?: () => void;
 };
 
-export default function RegisterPage({ onAuthenticated }: RegisterPageProps) {
+export default function RegisterPage({
+  onAuthenticated,
+  onNavigateToLogin,
+}: RegisterPageProps) {
   const { t } = useI18n();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -136,6 +140,32 @@ export default function RegisterPage({ onAuthenticated }: RegisterPageProps) {
           }}
         >
           {isLoading ? t("login.loading") : t("login.register")}
+        </button>
+
+        <div style={styles.divider}>
+          <span style={styles.dividerLine} />
+          <span style={styles.dividerText}>{t("login.or")}</span>
+          <span style={styles.dividerLine} />
+        </div>
+
+        <button
+          type="button"
+          onClick={onNavigateToLogin}
+          style={styles.secondaryButton}
+          onMouseEnter={(event) => {
+            (event.currentTarget as HTMLButtonElement).style.background =
+              "#F6F7F8";
+            (event.currentTarget as HTMLButtonElement).style.borderColor =
+              "#333333";
+          }}
+          onMouseLeave={(event) => {
+            (event.currentTarget as HTMLButtonElement).style.background =
+              "transparent";
+            (event.currentTarget as HTMLButtonElement).style.borderColor =
+              "#D8DDE3";
+          }}
+        >
+          {t("login.submit")}
         </button>
       </form>
 
@@ -286,6 +316,35 @@ const styles: Record<string, CSSProperties> = {
     letterSpacing: "0.03em",
     transition: "background 0.2s, opacity 0.2s",
     marginTop: 6,
-    marginBottom: 0,
+    marginBottom: 20,
+  },
+  divider: {
+    display: "flex",
+    alignItems: "center",
+    gap: 12,
+    marginBottom: 16,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    background: "#E5E7EB",
+  },
+  dividerText: {
+    fontSize: 12,
+    color: "#8B949E",
+    letterSpacing: "0.05em",
+  },
+  secondaryButton: {
+    width: "100%",
+    height: 50,
+    borderRadius: 12,
+    border: "1.5px solid #D8DDE3",
+    background: "transparent",
+    color: "#333333",
+    fontSize: 15,
+    fontWeight: 500,
+    fontFamily: "inherit",
+    cursor: "pointer",
+    transition: "background 0.2s, border-color 0.2s",
   },
 };

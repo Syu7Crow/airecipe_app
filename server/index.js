@@ -8,6 +8,7 @@ import {
 import {
   checkGeminiConnection,
   generateGeminiContent,
+  getGeminiUsageSnapshot,
 } from './gemini.js'
 import {
   createSessionFromTokens,
@@ -228,6 +229,14 @@ export async function handleApiRequest(request, response) {
   if (request.method === 'GET' && url.pathname === '/api/gemini/status') {
     const status = checkGeminiConnection()
     sendJson(response, status.ok ? 200 : 500, status)
+    return
+  }
+
+  if (request.method === 'GET' && url.pathname === '/api/gemini/usage') {
+    sendJson(response, 200, {
+      ok: true,
+      usage: getGeminiUsageSnapshot(),
+    })
     return
   }
 
@@ -463,10 +472,19 @@ async function handleGeminiGenerate(request, response) {
       ...result,
     })
   } catch (error) {
-    sendJson(response, 500, {
+    const statusCode = Number.isInteger(error?.statusCode)
+      ? error.statusCode
+      : 500
+
+    sendJson(response, statusCode, {
       ok: false,
       message:
         error instanceof Error ? error.message : 'Gemini request failed',
+      attemptedModels: error?.attemptedModels,
+      skippedModels: error?.skippedModels,
+      modelErrors: error?.modelErrors,
+      usage: error?.usage ?? getGeminiUsageSnapshot(),
+      retryAfterMs: error?.retryAfterMs,
     })
   }
 }
