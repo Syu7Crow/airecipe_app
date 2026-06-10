@@ -1807,35 +1807,48 @@ button:disabled {
 /* 冷蔵庫テーブルの特定の列幅 */
 .fridge-table th:nth-child(1),
 .fridge-table td:nth-child(1) {
-  width: 20%;
+  width: 18%;
+  min-width: 180px;
 }
 
 .fridge-table th:nth-child(2),
 .fridge-table td:nth-child(2) {
-  width: 15%;
+  width: 10%;
+  min-width: 90px;
   white-space: nowrap;
 }
 
 .fridge-table th:nth-child(3),
 .fridge-table td:nth-child(3) {
   width: 10%;
+  min-width: 90px;
   white-space: nowrap;
 }
 
 .fridge-table th:nth-child(4),
 .fridge-table td:nth-child(4) {
-  width: 10%;
+  width: 13%;
+  min-width: 110px;
   white-space: nowrap;
 }
 
 .fridge-table th:nth-child(5),
 .fridge-table td:nth-child(5) {
-  width: 10%;
+  width: 13%;
+  min-width: 110px;
+  white-space: nowrap;
 }
 
 .fridge-table th:nth-child(6),
 .fridge-table td:nth-child(6) {
-  width: 10%;
+  width: 20%;
+  min-width: 150px;
+}
+
+.fridge-table th:nth-child(7),
+.fridge-table td:nth-child(7) {
+  width: 16%;
+  min-width: 130px;
   white-space: nowrap;
 }
 
@@ -1926,6 +1939,39 @@ button:disabled {
   background-color: #fafbfc;
 }
 
+.ingredient-name-link {
+  padding: 0;
+  border: 0;
+  color: var(--ink);
+  background: transparent;
+  font: inherit;
+  font-weight: 900;
+  text-align: left;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.opened-badge-button {
+  display: inline-flex;
+  align-items: center;
+  min-height: 22px;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+.opened-badge-button.opened {
+  background-color: rgba(74, 222, 128, 0.2);
+  color: #15803d;
+}
+
+.opened-badge-button.unopened {
+  background-color: rgba(156, 163, 175, 0.1);
+  color: #4b5563;
+}
+
 .fridge-row-actions {
   display: flex;
   flex-wrap: wrap;
@@ -1938,6 +1984,88 @@ button:disabled {
 
 .ingredient-modal {
   width: min(620px, 100%);
+}
+
+.ingredient-detail-modal {
+  width: min(760px, 100%);
+  max-height: min(86vh, 760px);
+  overflow: auto;
+}
+
+.ingredient-detail-summary {
+  margin: 8px 0 0;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.ingredient-detail-total {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.ingredient-detail-total span {
+  display: grid;
+  gap: 4px;
+  padding: 12px;
+  border-radius: 8px;
+  background: var(--surface-soft);
+  color: var(--ink);
+  font-weight: 900;
+}
+
+.ingredient-detail-total strong {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.ingredient-detail-list {
+  display: grid;
+  gap: 12px;
+  margin-top: 18px;
+}
+
+.ingredient-detail-item {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.ingredient-detail-item > div:first-child {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.ingredient-detail-item > div:first-child span {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.ingredient-detail-item dl {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 10px;
+  margin: 0;
+}
+
+.ingredient-detail-item dt {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.ingredient-detail-item dd {
+  margin: 4px 0 0;
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 800;
+  overflow-wrap: anywhere;
 }
 
 .ingredient-form-grid {
@@ -2037,6 +2165,11 @@ button:disabled {
   }
 
   .ingredient-form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .ingredient-detail-total,
+  .ingredient-detail-item dl {
     grid-template-columns: 1fr;
   }
 
@@ -2199,6 +2332,15 @@ button:disabled {
   transition: border-color 0.2s ease, background 0.2s ease;
 }
 
+.register-upload-zone__input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
 .register-upload-zone:hover {
   border-color: var(--subtle);
   background: #f3f3f3;
@@ -2235,6 +2377,62 @@ button:disabled {
   color: var(--subtle);
   font-size: 12px;
   text-align: center;
+}
+
+.register-image-preview {
+  display: block;
+  width: 100%;
+  max-height: 320px;
+  margin-top: 16px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-soft);
+  object-fit: contain;
+}
+
+.register-recognition-result {
+  margin-top: 18px;
+}
+
+.register-recognition-result h3 {
+  margin: 0 0 10px;
+  color: var(--ink);
+  font-size: 15px;
+}
+
+.register-recognition-list {
+  display: grid;
+  gap: 10px;
+}
+
+.register-recognition-item {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 10px;
+  align-items: center;
+  padding: 12px;
+  border-radius: 8px;
+  background: var(--surface-soft);
+}
+
+.register-recognition-item input {
+  width: 18px;
+  height: 18px;
+}
+
+.register-recognition-item strong,
+.register-recognition-item small {
+  display: block;
+}
+
+.register-recognition-item strong {
+  color: var(--ink);
+}
+
+.register-recognition-item small {
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: 12px;
 }
 
 @media (max-width: 700px) {

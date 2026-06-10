@@ -297,6 +297,14 @@ function App() {
     handleNavigate('receipt-detail')
   }
 
+  function handleContinueIngredientRegisterCandidates(
+    items: ReceiptIngredientCandidate[],
+  ) {
+    setSelectedReceiptItems(items)
+    setReceiptDetailBackPage('ingredient-register')
+    handleNavigate('receipt-detail')
+  }
+
   if (isAuthLoading) {
     return null
   }
@@ -352,6 +360,7 @@ function App() {
         onNavigate={handleNavigate}
         onLogout={handleLogout}
         onContinue={handleContinueIngredientRegister}
+        onContinueCandidates={handleContinueIngredientRegisterCandidates}
       />
     )
   }

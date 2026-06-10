@@ -10,6 +10,45 @@ type TopbarProps = {
   onLogout?: () => void | Promise<void>
 }
 
+const viewedNotificationsStorageKey = 'ai-recipe-viewed-notifications'
+
+type ExpiringIngredientEntry = {
+  item: Ingredient
+  days: number
+  type: 'expiration' | 'bestBefore'
+  date: string | null | undefined
+}
+
+function getNotificationKey({ item, type, date }: ExpiringIngredientEntry) {
+  return `${item.inventoryId ?? item.ingredientId ?? item.name}:${type}:${date ?? ''}`
+}
+
+function readViewedNotifications() {
+  if (typeof window === 'undefined') {
+    return new Set<string>()
+  }
+
+  try {
+    const value = window.localStorage.getItem(viewedNotificationsStorageKey)
+    const parsed = value ? JSON.parse(value) : []
+
+    return new Set(Array.isArray(parsed) ? parsed.filter(Boolean) : [])
+  } catch {
+    return new Set<string>()
+  }
+}
+
+function saveViewedNotifications(keys: Set<string>) {
+  if (typeof window === 'undefined') {
+    return
+  }
+
+  window.localStorage.setItem(
+    viewedNotificationsStorageKey,
+    JSON.stringify(Array.from(keys)),
+  )
+}
+
 function getDaysRemaining(dateStr: string | null | undefined) {
   if (!dateStr) {
     return null
@@ -67,6 +106,9 @@ export function Topbar({ onNavigate, onLogout }: TopbarProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [ingredients, setIngredients] = useState<Ingredient[]>([])
   const [preferences, setPreferences] = useState<UserPreferences>(defaultPreferences)
+  const [viewedNotificationKeys, setViewedNotificationKeys] = useState(
+    readViewedNotifications,
+  )
   const notificationRef = useRef<HTMLDivElement | null>(null)
 
   const loadData = useCallback(() => {
@@ -150,7 +192,34 @@ export function Topbar({ onNavigate, onLogout }: TopbarProps) {
       .sort((a, b) => a.days - b.days)
   }, [ingredients, preferences])
 
-  const nearExpirationCount = expiringIngredients.length
+  const unreadExpirationCount = expiringIngredients.filter(
+    (entry) => !viewedNotificationKeys.has(getNotificationKey(entry)),
+  ).length
+
+  function markNotificationsViewed(entries: ExpiringIngredientEntry[]) {
+    if (entries.length === 0) {
+      return
+    }
+
+    setViewedNotificationKeys((current) => {
+      const next = new Set(current)
+      entries.forEach((entry) => next.add(getNotificationKey(entry)))
+      saveViewedNotifications(next)
+      return next
+    })
+  }
+
+  function toggleNotifications() {
+    setIsOpen((current) => {
+      const nextIsOpen = !current
+
+      if (nextIsOpen) {
+        markNotificationsViewed(expiringIngredients)
+      }
+
+      return nextIsOpen
+    })
+  }
 
   const getDaysText = (days: number) => {
     if (days < 0) {
@@ -250,11 +319,11 @@ export function Topbar({ onNavigate, onLogout }: TopbarProps) {
             className="icon-button"
             aria-label={t('topbar.notifications')}
             aria-expanded={isOpen}
-            onClick={() => setIsOpen((current) => !current)}
+            onClick={toggleNotifications}
           >
             <Icon name="bell" />
-            {nearExpirationCount > 0 && (
-              <span className="notification-badge">{nearExpirationCount}</span>
+            {unreadExpirationCount > 0 && (
+              <span className="notification-badge">{unreadExpirationCount}</span>
             )}
           </button>
 
