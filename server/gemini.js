@@ -1,7 +1,7 @@
 import './env.js'
 
 const geminiApiKey = process.env.GEMINI_API_KEY
-export const defaultGeminiModel = 'gemma-4-31b-it'
+export const defaultGeminiModel = 'gemini-2.5-flash-lite'
 const geminiBaseUrl = 'https://generativelanguage.googleapis.com/v1beta'
 
 export function checkGeminiConnection() {

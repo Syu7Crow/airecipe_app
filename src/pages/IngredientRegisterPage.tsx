@@ -17,7 +17,7 @@ type IngredientRegisterPageProps = {
   onContinueCandidates?: (items: ReceiptIngredientCandidate[]) => void
 }
 
-const foodRecognitionModel = 'gemma-4-31b-it'
+const foodRecognitionModel = 'gemini-2.5-flash-lite'
 
 const foodRecognitionPrompt = `画像に写っている食品・食材だけを抽出してください。
 レシート、値札、食器、調理器具、背景、人物は食材として扱わないでください。

@@ -9,7 +9,7 @@ type GeminiTestPageProps = {
   onLogout?: () => void | Promise<void>
 }
 
-const geminiTestModel = 'gemma-4-31b-it'
+const geminiTestModel = 'gemini-2.5-flash-lite'
 
 function readFileAsDataUrl(file: File) {
   return new Promise<string>((resolve, reject) => {
