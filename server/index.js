@@ -83,19 +83,6 @@ function isLocalRequest(request) {
   return host.startsWith('localhost') || host.startsWith('127.0.0.1')
 }
 
-function isLocalOrigin(origin) {
-  if (!origin) {
-    return false
-  }
-
-  try {
-    const url = new URL(origin)
-    return url.hostname === 'localhost' || url.hostname === '127.0.0.1'
-  } catch {
-    return false
-  }
-}
-
 function serializeCookie(request, name, value, options = {}) {
   const secure = !isLocalRequest(request)
   const parts = [
@@ -149,45 +136,20 @@ function createClearAuthCookieHeaders(request) {
 }
 
 function getRequestOrigin(request, requestedOrigin) {
-  const origin = request.headers.origin
+  const forwardedProto = request.headers['x-forwarded-proto']
+  const forwardedHost = request.headers['x-forwarded-host']
+  const host = forwardedHost ?? request.headers.host
 
-  if (isLocalOrigin(origin)) {
-    return origin.replace(/\/$/, '')
+  if (host) {
+    const proto = forwardedProto ?? (isLocalRequest(request) ? 'http' : 'https')
+    return `${proto}://${host}`.replace(/\/$/, '')
   }
-
-  if (isLocalRequest(request) && isLocalOrigin(requestedOrigin)) {
-    return requestedOrigin.replace(/\/$/, '')
-  }
-
-  if (origin) {
-  return origin.replace(/\/$/, '')
-}
 
   if (requestedOrigin) {
     return requestedOrigin.replace(/\/$/, '')
   }
 
-  const explicitAppUrl =
-    process.env.APP_URL ??
-    process.env.PUBLIC_APP_URL ??
-    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null)
-
-  if (explicitAppUrl) {
-    return explicitAppUrl.replace(/\/$/, '')
-  }
-
-  const forwardedProto = request.headers['x-forwarded-proto']
-  const forwardedHost = request.headers['x-forwarded-host']
-  const host = forwardedHost ?? request.headers.host
-
-  if (!host) {
-    return null
-  }
-
-  const proto =
-    forwardedProto ?? (isLocalRequest(request) ? 'http' : 'https')
-
-  return `${proto}://${host}`.replace(/\/$/, '')
+  return null
 }
 
 async function requireAuthenticatedUser(request) {
