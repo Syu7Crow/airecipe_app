@@ -9,6 +9,8 @@ type ReceiptScanPageProps = {
   onNavigate?: (page: AppDestination) => void
   onLogout?: () => void
   onProceedToDetail?: (items: ReceiptIngredientCandidate[]) => void
+  embedded?: boolean
+  allowManualCandidates?: boolean
 }
 
 function createCandidateId() {
@@ -126,7 +128,13 @@ function localFallbackParseReceiptText(text: string) {
     .filter((item) => item.name)
 }
 
-export function ReceiptScanPage({ onNavigate, onLogout, onProceedToDetail }: ReceiptScanPageProps) {
+export function ReceiptScanPage({
+  onNavigate,
+  onLogout,
+  onProceedToDetail,
+  embedded = false,
+  allowManualCandidates = true,
+}: ReceiptScanPageProps) {
   const { t } = useI18n()
   const videoRef = useRef<HTMLVideoElement | null>(null)
   const cameraStreamRef = useRef<MediaStream | null>(null)
@@ -325,7 +333,7 @@ export function ReceiptScanPage({ onNavigate, onLogout, onProceedToDetail }: Rec
         sourceLine: t('receipt.addItem'),
       },
     ])
-    setStatusMessage('手動入力用の項目を追加しました')
+    setStatusMessage(t('receipt.manualAdded'))
     setErrorMessage('')
   }
 
@@ -340,11 +348,9 @@ export function ReceiptScanPage({ onNavigate, onLogout, onProceedToDetail }: Rec
     onProceedToDetail?.(selectedItems)
   }
 
-  return (
-    <div className="app-shell">
-      <Topbar onNavigate={onNavigate} onLogout={onLogout} />
-
-      <main className="receipt-page">
+  const content = (
+    <main className={`receipt-page ${embedded ? 'receipt-page--embedded' : ''}`}>
+      {!embedded ? (
         <div className="fridge-header">
           <div>
             <p className="eyebrow">{t('receipt.eyebrow')}</p>
@@ -358,6 +364,7 @@ export function ReceiptScanPage({ onNavigate, onLogout, onProceedToDetail }: Rec
             {t('common.backHome')}
           </button>
         </div>
+      ) : null}
 
         <section className="receipt-layout">
           <div className="panel receipt-uploader">
@@ -470,14 +477,16 @@ export function ReceiptScanPage({ onNavigate, onLogout, onProceedToDetail }: Rec
                 <h2>{t('receipt.candidatesTitle')}</h2>
               </div>
               <div className="receipt-candidate-actions">
-                <button
-                  type="button"
-                  className="secondary-button"
-                  onClick={addManualCandidate}
-                  disabled={isReading || isParsing}
-                >
-                  {t('receipt.addItem')}
-                </button>
+                {allowManualCandidates ? (
+                  <button
+                    type="button"
+                    className="secondary-button"
+                    onClick={addManualCandidate}
+                    disabled={isReading || isParsing}
+                  >
+                    {t('receipt.addItem')}
+                  </button>
+                ) : null}
                 <button
                   type="button"
                   className="primary-button"
@@ -570,7 +579,7 @@ export function ReceiptScanPage({ onNavigate, onLogout, onProceedToDetail }: Rec
               ))}
             </div>
           </section>
-        ) : (
+        ) : allowManualCandidates ? (
           <section className="panel receipt-candidates">
             <div className="section-heading">
               <div>
@@ -589,8 +598,18 @@ export function ReceiptScanPage({ onNavigate, onLogout, onProceedToDetail }: Rec
               {t('receipt.manualEmpty')}
             </p>
           </section>
-        )}
-      </main>
+        ) : null}
+    </main>
+  )
+
+  if (embedded) {
+    return content
+  }
+
+  return (
+    <div className="app-shell">
+      <Topbar onNavigate={onNavigate} onLogout={onLogout} />
+      {content}
     </div>
   )
 }

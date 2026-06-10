@@ -10,8 +10,8 @@
   --warning: #8a6f2e;
   --info: #4e5f78;
   --line: #e6e6e6;
-  --shadow-soft: 0 18px 42px rgba(51, 51, 51, 0.08);
-  --shadow-subtle: 0 8px 24px rgba(51, 51, 51, 0.05);
+  --shadow-soft: none;
+  --shadow-subtle: none;
   color: var(--ink);
   background: var(--app-bg);
   font-family:

@@ -884,6 +884,7 @@ async function handleRecipeGeneration(request, response, userId) {
       servings: body?.servings,
       language: body?.language,
       avoidedIngredients: body?.avoidedIngredients,
+      cookingRequest: body?.cookingRequest,
     })
 
     sendJson(response, 200, {

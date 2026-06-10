@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Topbar } from '../components/Topbar'
 import { importReceiptItemsDetail } from '../lib/receiptApi'
+import { useI18n } from '../lib/useI18n'
 import type { AppDestination, ReceiptIngredientCandidate } from '../types/ui'
 
 type ReceiptDetailRegisterPageProps = {
@@ -8,6 +9,7 @@ type ReceiptDetailRegisterPageProps = {
   onBack: () => void
   onNavigate: (page: AppDestination) => void
   onLogout?: () => void
+  embedded?: boolean
 }
 
 type EditableCandidate = ReceiptIngredientCandidate & {
@@ -74,7 +76,9 @@ export function ReceiptDetailRegisterPage({
   onBack,
   onNavigate,
   onLogout,
+  embedded = false,
 }: ReceiptDetailRegisterPageProps) {
+  const { t } = useI18n()
   const [formData, setFormData] = useState<EditableCandidate[]>(() =>
     createInitialFormData(items),
   )
@@ -83,11 +87,11 @@ export function ReceiptDetailRegisterPage({
   const [errorMessage, setErrorMessage] = useState('')
 
   const categories = [
-    '肉・卵・魚',
-    '野菜',
-    '乳製品',
-    '加工品',
-    'その他',
+    { value: '肉・卵・魚', label: t('category.meatEggFish') },
+    { value: '野菜', label: t('category.vegetable') },
+    { value: '乳製品', label: t('category.dairy') },
+    { value: '加工品', label: t('category.processed') },
+    { value: 'その他', label: t('category.other') },
   ]
 
   const handleChange = <K extends keyof EditableCandidate>(
@@ -106,15 +110,15 @@ export function ReceiptDetailRegisterPage({
     // Validation
     for (const item of formData) {
       if (!item.name.trim()) {
-        setErrorMessage('食材名を入力してください。')
+        setErrorMessage(t('receiptDetail.nameRequired'))
         return
       }
       if (!item.category) {
-        setErrorMessage('カテゴリーを選択してください。')
+        setErrorMessage(t('receiptDetail.categoryRequired'))
         return
       }
       if (item.quantity === null || item.quantity === undefined || item.quantity <= 0) {
-        setErrorMessage('個数は1以上を入力してください。')
+        setErrorMessage(t('receiptDetail.quantityRequired'))
         return
       }
     }
@@ -125,32 +129,31 @@ export function ReceiptDetailRegisterPage({
 
     try {
       const result = await importReceiptItemsDetail(formData)
-      setStatusMessage(`${result.importedCount}件の食材を冷蔵庫に登録しました！`)
+      setStatusMessage(
+        t('receiptDetail.importSuccess', { count: result.importedCount }),
+      )
     } catch (error) {
       console.error('[vite] Import detail failed:', error)
-      setErrorMessage('一括登録に失敗しました。時間をおいて再度お試しください。')
+      setErrorMessage(t('receiptDetail.importFailed'))
     } finally {
       setIsSubmitting(false)
     }
   }
 
-  return (
-    <div className="app-shell">
-      <Topbar onNavigate={onNavigate} onLogout={onLogout} />
-
-      <main className="receipt-detail-page">
+  const content = (
+    <main className={`receipt-detail-page ${embedded ? 'receipt-detail-page--embedded' : ''}`}>
         {/* Back Link */}
         <div className="back-link-wrapper">
           <button type="button" className="back-text-button" onClick={onBack}>
-            <span className="arrow-left">←</span> 食材登録に戻る
+            <span className="arrow-left">←</span> {t('receiptDetail.back')}
           </button>
         </div>
 
         {/* Header */}
         <div className="detail-header">
-          <h1>詳細登録</h1>
+          <h1>{t('receiptDetail.title')}</h1>
           <p className="subtitle">
-            複数の食材をまとめて編集して、冷蔵庫に一括登録できます。
+            {t('receiptDetail.subtitle')}
           </p>
         </div>
 
@@ -158,12 +161,12 @@ export function ReceiptDetailRegisterPage({
         <div className="step-bar">
           <div className="step-item completed">
             <span className="step-number">✓</span>
-            <span className="step-label">食材登録</span>
+            <span className="step-label">{t('receiptDetail.stepRegister')}</span>
           </div>
           <div className="step-connector"></div>
           <div className="step-item active">
             <span className="step-number">2</span>
-            <span className="step-label">詳細登録</span>
+            <span className="step-label">{t('receiptDetail.stepDetail')}</span>
           </div>
         </div>
 
@@ -176,7 +179,7 @@ export function ReceiptDetailRegisterPage({
               className="primary-button inline-fridge-button"
               onClick={() => onNavigate('fridge')}
             >
-              冷蔵庫を見る
+              {t('receiptDetail.viewInventory')}
             </button>
           </div>
         )}
@@ -191,37 +194,39 @@ export function ReceiptDetailRegisterPage({
         {!statusMessage && (
           <div className="panel detail-form-panel">
             <div className="panel-header">
-              <h2>登録内容（複数）</h2>
+              <h2>{t('receiptDetail.formTitle')}</h2>
               <p className="panel-lead">
-                食材ごとに個数・グラム・期限・メモを入力してください。
+                {t('receiptDetail.formLead')}
               </p>
             </div>
 
             {formData.length > 0 && (
               <div className="summary-banner">
-                {formData.length}件の食材が読み取られました。必要な項目を確認して登録してください。
+                {t('receiptDetail.summary', { count: formData.length })}
               </div>
             )}
 
             {formData.length === 0 ? (
-              <p className="empty-text">登録対象の食材がありません。食材登録に戻ってください。</p>
+              <p className="empty-text">{t('receiptDetail.empty')}</p>
             ) : (
               <div className="detail-cards-list">
                 {formData.map((item, index) => (
                   <div key={item.id || index} className="detail-card">
-                    <div className="card-index-title">{index + 1}件目</div>
+                    <div className="card-index-title">
+                      {t('receiptDetail.itemLabel', { number: index + 1 })}
+                    </div>
 
                     <div className="card-fields-grid">
                       {/* Name */}
                       <div className="field-group">
                         <label>
-                          食材名<span className="required">*</span>
+                          {t('receiptDetail.name')}<span className="required">*</span>
                         </label>
                         <input
                           type="text"
                           value={item.name}
                           onChange={(e) => handleChange(index, 'name', e.target.value)}
-                          placeholder="例：鮭切り身"
+                          placeholder={t('receiptDetail.namePlaceholder')}
                           required
                         />
                       </div>
@@ -229,7 +234,7 @@ export function ReceiptDetailRegisterPage({
                       {/* Category */}
                       <div className="field-group">
                         <label>
-                          カテゴリー<span className="required">*</span>
+                          {t('receiptDetail.category')}<span className="required">*</span>
                         </label>
                         <div className="select-wrapper">
                           <select
@@ -237,10 +242,10 @@ export function ReceiptDetailRegisterPage({
                             onChange={(e) => handleChange(index, 'category', e.target.value)}
                             required
                           >
-                            <option value="" disabled>カテゴリーを選択</option>
+                            <option value="" disabled>{t('receiptDetail.categorySelect')}</option>
                             {categories.map((cat) => (
-                              <option key={cat} value={cat}>
-                                {cat}
+                              <option key={cat.value} value={cat.value}>
+                                {cat.label}
                               </option>
                             ))}
                           </select>
@@ -250,7 +255,7 @@ export function ReceiptDetailRegisterPage({
                       {/* Quantity */}
                       <div className="field-group">
                         <label>
-                          個数<span className="required">*</span>
+                          {t('receiptDetail.quantity')}<span className="required">*</span>
                         </label>
                         <input
                           type="number"
@@ -263,19 +268,19 @@ export function ReceiptDetailRegisterPage({
 
                       {/* Gram / ml */}
                       <div className="field-group">
-                        <label>グラム又はml (任意)</label>
+                        <label>{t('receiptDetail.gram')}</label>
                         <input
                           type="number"
                           min="0"
                           value={item.gram ?? ''}
                           onChange={(e) => handleChange(index, 'gram', e.target.value ? Number(e.target.value) : null)}
-                          placeholder="例：320"
+                          placeholder={t('receiptDetail.gramPlaceholder')}
                         />
                       </div>
 
                       {/* Best Before Date */}
                       <div className="field-group">
-                        <label>賞味期限</label>
+                        <label>{t('receiptDetail.bestBefore')}</label>
                         <input
                           type="date"
                           value={item.bestBeforeDate}
@@ -285,7 +290,7 @@ export function ReceiptDetailRegisterPage({
 
                       {/* Expiration Date */}
                       <div className="field-group">
-                        <label>消費期限 (任意)</label>
+                        <label>{t('receiptDetail.expiration')}</label>
                         <input
                           type="date"
                           value={item.expirationDate}
@@ -295,12 +300,12 @@ export function ReceiptDetailRegisterPage({
 
                       {/* Memo */}
                       <div className="field-group full-width">
-                        <label>メモ (任意)</label>
+                        <label>{t('receiptDetail.memo')}</label>
                         <textarea
                           rows={2}
                           value={item.memo}
                           onChange={(e) => handleChange(index, 'memo', e.target.value)}
-                          placeholder="例：夕食に使用予定"
+                          placeholder={t('receiptDetail.memoPlaceholder')}
                         />
                       </div>
                     </div>
@@ -318,7 +323,7 @@ export function ReceiptDetailRegisterPage({
                   onClick={onBack}
                   disabled={isSubmitting}
                 >
-                  戻る
+                  {t('common.back')}
                 </button>
                 <button
                   type="button"
@@ -326,13 +331,25 @@ export function ReceiptDetailRegisterPage({
                   onClick={handleSubmit}
                   disabled={isSubmitting}
                 >
-                  {isSubmitting ? '登録中...' : '一括で冷蔵庫に登録する'}
+                  {isSubmitting
+                    ? t('receiptDetail.submitting')
+                    : t('receiptDetail.submit')}
                 </button>
               </div>
             )}
           </div>
         )}
-      </main>
+    </main>
+  )
+
+  if (embedded) {
+    return content
+  }
+
+  return (
+    <div className="app-shell">
+      <Topbar onNavigate={onNavigate} onLogout={onLogout} />
+      {content}
     </div>
   )
 }

@@ -11,6 +11,7 @@ import { GeminiTestPage } from './pages/GeminiTestPage'
 import { IngredientRegisterPage } from './pages/IngredientRegisterPage'
 import { ReceiptDetailRegisterPage } from './pages/ReceiptDetailRegisterPage'
 import { SettingsPage } from './pages/SettingsPage'
+import { RecipeGeneratePage } from './pages/RecipeGeneratePage'
 import LoginScreen from './pages/LoginScreen'
 import RegisterPage from './pages/RegisterPage'
 import {
@@ -40,6 +41,10 @@ function getPageFromPath(): AppDestination {
 
   if (window.location.pathname === '/receipt') {
     return 'receipt'
+  }
+
+  if (window.location.pathname === '/recipe-generate') {
+    return 'recipe-generate'
   }
 
   if (window.location.pathname === '/ingredient-register') {
@@ -286,7 +291,13 @@ function App() {
       return
     }
 
-    setRecipeBackPage(currentPage === 'history' ? 'history' : 'home')
+    setRecipeBackPage(
+      currentPage === 'history'
+        ? 'history'
+        : currentPage === 'recipe-generate'
+          ? 'recipe-generate'
+          : 'home',
+    )
     setSelectedRecipe(recipe)
     setCurrentPage('recipe')
   }
@@ -350,6 +361,16 @@ function App() {
           setReceiptDetailBackPage('receipt')
           handleNavigate('receipt-detail')
         }}
+      />
+    )
+  }
+
+  if (currentPage === 'recipe-generate') {
+    return (
+      <RecipeGeneratePage
+        onNavigate={handleNavigate}
+        onSelectRecipe={handleSelectRecipe}
+        onLogout={handleLogout}
       />
     )
   }

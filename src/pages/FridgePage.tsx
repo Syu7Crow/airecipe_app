@@ -14,7 +14,6 @@ import type { AppDestination, Ingredient } from '../types/ui'
 type Summary = {
   totalCount: number
   uniqueNamesCount: number
-  openedCount: number
   nearExpirationCount: number
 }
 
@@ -28,7 +27,6 @@ type IngredientFormState = {
   gram: string
   expirationDate: string
   bestBeforeDate: string
-  isOpened: boolean
   memo: string
 }
 
@@ -39,7 +37,6 @@ const emptyForm: IngredientFormState = {
   gram: '',
   expirationDate: '',
   bestBeforeDate: '',
-  isOpened: false,
   memo: '',
 }
 
@@ -51,11 +48,15 @@ type AggregatedIngredient = {
   gram: number
   nearestExpirationDate: string | null
   nearestBestBeforeDate: string | null
-  isOpened: boolean
   isGrouped: boolean
   memo: string
   items: Ingredient[]
 }
+
+type DeleteConfirmState = {
+  message: string
+  inventoryIds: number[]
+} | null
 
 function isNearExpiration(expirationDate: string | null | undefined) {
   if (!expirationDate) {
@@ -76,6 +77,23 @@ function isNearExpiration(expirationDate: string | null | undefined) {
   )
 
   return diffDays >= 0 && diffDays <= 3
+}
+
+function isExpired(expirationDate: string | null | undefined) {
+  if (!expirationDate) {
+    return false
+  }
+
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+
+  const expiry = new Date(`${expirationDate}T00:00:00`)
+
+  if (Number.isNaN(expiry.getTime())) {
+    return false
+  }
+
+  return expiry.getTime() < today.getTime()
 }
 
 function formatDate(value: string | null | undefined, language: string) {
@@ -133,6 +151,22 @@ function getNearestDate(values: Array<string | null | undefined>) {
   return validDates[0] ?? null
 }
 
+function compareCategoryNames(left: string, right: string) {
+    if (left === 'その他' && right !== 'その他') {
+      return 1
+    }
+
+    if (right === 'その他' && left !== 'その他') {
+      return -1
+    }
+
+    return left.localeCompare(right, 'ja')
+}
+
+function sortCategoryNames(categories: string[]) {
+  return categories.toSorted(compareCategoryNames)
+}
+
 function aggregateIngredients(ingredients: Ingredient[]): AggregatedIngredient[] {
   const groups = new Map<string, Ingredient[]>()
 
@@ -160,7 +194,6 @@ function aggregateIngredients(ingredients: Ingredient[]): AggregatedIngredient[]
         nearestBestBeforeDate: getNearestDate(
           items.map((item) => item.bestBeforeDate),
         ),
-        isOpened: items.some((item) => item.isOpened),
         isGrouped: items.length > 1,
         memo: items[0]?.memo || '-',
         items,
@@ -175,7 +208,6 @@ function buildSummary(ingredients: Ingredient[]): Summary {
     uniqueNamesCount: new Set(
       ingredients.map((item) => item.name.trim().toLocaleLowerCase()),
     ).size,
-    openedCount: ingredients.filter((item) => item.isOpened).length,
     nearExpirationCount: ingredients.filter((item) =>
       isNearExpiration(item.expirationDate) || isNearExpiration(item.bestBeforeDate),
     ).length,
@@ -191,7 +223,6 @@ function buildFormFromIngredient(ingredient: Ingredient): IngredientFormState {
     gram: ingredient.gram ? String(ingredient.gram) : '',
     expirationDate: ingredient.expirationDate ?? '',
     bestBeforeDate: ingredient.bestBeforeDate ?? '',
-    isOpened: ingredient.isOpened ?? false,
     memo: ingredient.memo ?? '',
   }
 }
@@ -205,7 +236,6 @@ function toMutationInput(form: IngredientFormState): InventoryMutationInput {
     gram: form.gram ? Number(form.gram) : null,
     expirationDate: form.expirationDate || null,
     bestBeforeDate: form.bestBeforeDate || null,
-    isOpened: form.isOpened,
     memo: form.memo.trim() || null,
   }
 }
@@ -227,6 +257,11 @@ export function FridgePage({
   const [isFormOpen, setIsFormOpen] = useState(false)
   const [detailIngredient, setDetailIngredient] =
     useState<AggregatedIngredient | null>(null)
+  const [isSelectionMode, setIsSelectionMode] = useState(false)
+  const [selectedInventoryIds, setSelectedInventoryIds] = useState<Set<number>>(
+    () => new Set(),
+  )
+  const [deleteConfirm, setDeleteConfirm] = useState<DeleteConfirmState>(null)
   const [isSaving, setIsSaving] = useState(false)
   const [formError, setFormError] = useState('')
   const summary = useMemo(() => buildSummary(ingredients), [ingredients])
@@ -247,6 +282,13 @@ export function FridgePage({
       ),
     [aggregatedIngredients],
   )
+  const sortedCategoryEntries = useMemo(
+    () =>
+      sortCategoryNames(Object.keys(groupedIngredients)).map(
+        (category) => [category, groupedIngredients[category]] as const,
+      ),
+    [groupedIngredients],
+  )
   const formCategories = useMemo(
     () =>
       Array.from(
@@ -260,16 +302,33 @@ export function FridgePage({
             .map((item) => item.category?.trim())
             .filter((category): category is string => Boolean(category)),
         ]),
-      ),
+      ).toSorted(compareCategoryNames),
     [ingredients],
   )
   const categories = useMemo(
-    () => [allCategoryKey, ...Object.keys(groupedIngredients)],
+    () => [allCategoryKey, ...sortCategoryNames(Object.keys(groupedIngredients))],
     [groupedIngredients],
   )
   const displayActiveCategory = categories.includes(activeCategory)
     ? activeCategory
     : allCategoryKey
+
+  function getCategoryLabel(category: string) {
+    switch (category) {
+      case '肉・卵・魚':
+        return t('category.meatEggFish')
+      case '野菜':
+        return t('category.vegetable')
+      case '乳製品':
+        return t('category.dairy')
+      case '加工品':
+        return t('category.processed')
+      case 'その他':
+        return t('category.other')
+      default:
+        return category
+    }
+  }
 
   useEffect(() => {
     let isMounted = true
@@ -373,39 +432,42 @@ export function FridgePage({
       return
     }
 
-    const confirmed = window.confirm(
-      t('fridge.confirmDelete', { name: ingredient.name }),
-    )
-
-    if (!confirmed) {
-      return
-    }
-
-    setStatusMessage('')
-    setError(null)
-
-    try {
-      const result = await deleteInventoryItem(ingredient.inventoryId)
-      setIngredients(result.inventory)
-      setDetailIngredient((current) =>
-        current
-          ? aggregateIngredients(result.inventory).find(
-              (item) => item.key === current.key,
-            ) ?? null
-          : null,
-      )
-      setStatusMessage(t('fridge.status.deleted'))
-    } catch (deleteError) {
-      setError(
-        deleteError instanceof Error
-          ? deleteError.message
-          : t('fridge.status.deleteFailed'),
-      )
-    }
+    setDeleteConfirm({
+      message: t('fridge.confirmDelete', { name: ingredient.name }),
+      inventoryIds: [ingredient.inventoryId],
+    })
   }
 
-  async function handleToggleOpened(inventory: Ingredient) {
-    if (!inventory.inventoryId) {
+  function getInventoryIds(items: Ingredient[]) {
+    return items
+      .map((item) => item.inventoryId)
+      .filter((id): id is number => typeof id === 'number')
+  }
+
+  function setGroupSelected(items: Ingredient[], selected: boolean) {
+    const ids = getInventoryIds(items)
+
+    setSelectedInventoryIds((current) => {
+      const next = new Set(current)
+      ids.forEach((id) => {
+        if (selected) {
+          next.add(id)
+        } else {
+          next.delete(id)
+        }
+      })
+      if (!selected && next.size === 0) {
+        setIsSelectionMode(false)
+      }
+      return next
+    })
+  }
+
+  async function executeDeleteInventoryIds(ids: number[]) {
+    const uniqueIds = Array.from(new Set(ids))
+
+    if (!uniqueIds.length) {
+      setStatusMessage(t('fridge.selection.deleteNone'))
       return
     }
 
@@ -414,37 +476,64 @@ export function FridgePage({
     setError(null)
 
     try {
-      const input: InventoryMutationInput = {
-        inventoryId: inventory.inventoryId,
-        name: inventory.name,
-        category: inventory.category,
-        quantity: inventory.quantity ?? null,
-        gram: inventory.gram ?? null,
-        expirationDate: inventory.expirationDate ?? null,
-        bestBeforeDate: inventory.bestBeforeDate ?? null,
-        isOpened: !inventory.isOpened,
-        memo: inventory.memo,
+      let latestInventory = ingredients
+
+      for (const inventoryId of uniqueIds) {
+        const result = await deleteInventoryItem(inventoryId)
+        latestInventory = result.inventory
       }
 
-      const result = await updateInventoryItem(input)
-      setIngredients(result.inventory)
+      setIngredients(latestInventory)
       setDetailIngredient((current) =>
         current
-          ? aggregateIngredients(result.inventory).find(
+          ? aggregateIngredients(latestInventory).find(
               (item) => item.key === current.key,
             ) ?? null
           : null,
       )
-      setStatusMessage(t('fridge.status.updated'))
-    } catch (toggleError) {
+      setSelectedInventoryIds(new Set())
+      setIsSelectionMode(false)
+      setStatusMessage(
+        t('fridge.selection.deletedCount', { count: uniqueIds.length }),
+      )
+    } catch (deleteError) {
       setError(
-        toggleError instanceof Error
-          ? toggleError.message
-          : t('fridge.status.saveFailed'),
+        deleteError instanceof Error
+          ? deleteError.message
+          : t('fridge.status.deleteFailed'),
       )
     } finally {
       setIsSaving(false)
+      setDeleteConfirm(null)
     }
+  }
+
+  function handleDeleteSelected() {
+    setDeleteConfirm({
+      inventoryIds: Array.from(selectedInventoryIds),
+      message: t('fridge.selection.confirmDeleteSelected', {
+        count: selectedInventoryIds.size,
+      }),
+    })
+  }
+
+  function handleDeleteExpired() {
+    const expiredIds = ingredients
+      .filter(
+        (item) =>
+          typeof item.inventoryId === 'number' &&
+          selectedInventoryIds.has(item.inventoryId) &&
+          isExpired(item.expirationDate),
+      )
+      .map((item) => item.inventoryId)
+      .filter((id): id is number => typeof id === 'number')
+
+    setDeleteConfirm({
+      inventoryIds: expiredIds,
+      message: t('fridge.selection.confirmDeleteSelectedExpired', {
+        count: expiredIds.length,
+      }),
+    })
   }
 
   if (loading) {
@@ -524,11 +613,6 @@ export function FridgePage({
             <span className="card-note">{t('fridge.summary.uniqueNote')}</span>
           </div>
           <div className="summary-card">
-            <span className="card-label">{t('fridge.summary.opened')}</span>
-            <strong className="card-value">{summary.openedCount}</strong>
-            <span className="card-note">{t('fridge.summary.openedNote')}</span>
-          </div>
-          <div className="summary-card near-expiration">
             <span className="card-label">{t('fridge.summary.nearExpiration')}</span>
             <strong className="card-value">{summary.nearExpirationCount}</strong>
             <span className="card-note">
@@ -546,9 +630,67 @@ export function FridgePage({
                 }`}
               onClick={() => setActiveCategory(category)}
             >
-              {category === allCategoryKey ? t('fridge.filter.all') : category}
+              {category === allCategoryKey
+                ? t('fridge.filter.all')
+                : getCategoryLabel(category)}
             </button>
           ))}
+        </div>
+
+        <div className="fridge-bulk-actions">
+          {isSelectionMode ? (
+            <>
+              <span>
+                {t('fridge.selection.count', {
+                  count: selectedInventoryIds.size,
+                })}
+              </span>
+              <button
+                type="button"
+                className="secondary-button danger-button"
+                onClick={handleDeleteSelected}
+                disabled={isSaving || selectedInventoryIds.size === 0}
+              >
+                {t('fridge.selection.deleteSelected')}
+              </button>
+              <button
+                type="button"
+                className="secondary-button danger-button"
+                onClick={handleDeleteExpired}
+                disabled={
+                  isSaving ||
+                  !ingredients.some(
+                    (item) =>
+                      typeof item.inventoryId === 'number' &&
+                      selectedInventoryIds.has(item.inventoryId) &&
+                      isExpired(item.expirationDate),
+                  )
+                }
+              >
+                {t('fridge.selection.deleteSelectedExpired')}
+              </button>
+              <button
+                type="button"
+                className="secondary-button fridge-selection-cancel"
+                onClick={() => {
+                  setSelectedInventoryIds(new Set())
+                  setIsSelectionMode(false)
+                }}
+                disabled={isSaving}
+              >
+                {t('fridge.selection.clear')}
+              </button>
+            </>
+          ) : (
+            <button
+              type="button"
+              className="secondary-button"
+              onClick={() => setIsSelectionMode(true)}
+              disabled={isSaving || ingredients.length === 0}
+            >
+              {t('fridge.selection.select')}
+            </button>
+          )}
         </div>
 
         <div className="fridge-tables">
@@ -557,7 +699,7 @@ export function FridgePage({
               {t('fridge.empty')}
             </div>
           ) : (
-            Object.entries(groupedIngredients)
+            sortedCategoryEntries
               .filter(
                 ([category]) =>
                   displayActiveCategory === allCategoryKey ||
@@ -565,11 +707,14 @@ export function FridgePage({
               )
               .map(([category, items]) => (
                 <div key={category} className="category-table-wrapper">
-                  <h2 className="category-title">{category}</h2>
+                  <h2 className="category-title">{getCategoryLabel(category)}</h2>
                   <div className="table-container">
-                    <table className="fridge-table">
+                    <table className={`fridge-table ${isSelectionMode ? 'is-selecting' : ''}`}>
                       <thead>
                         <tr>
+                          {isSelectionMode ? (
+                            <th aria-label={t('fridge.selection.select')}></th>
+                          ) : null}
                           <th>{t('fridge.table.ingredient')}</th>
                           <th>{t('fridge.form.quantity')}</th>
                           <th>{t('fridge.form.gram')}</th>
@@ -584,8 +729,30 @@ export function FridgePage({
                           const isWarning =
                             isNearExpiration(item.nearestExpirationDate) ||
                             isNearExpiration(item.nearestBestBeforeDate)
+                          const itemIds = getInventoryIds(item.items)
+                          const isSelected =
+                            itemIds.length > 0 &&
+                            itemIds.every((id) => selectedInventoryIds.has(id))
                           return (
                             <tr key={item.key} className={isWarning ? 'near-expiration-row' : ''}>
+                              {isSelectionMode ? (
+                                <td>
+                                  <input
+                                    type="checkbox"
+                                    aria-label={t(
+                                      'fridge.selection.selectAria',
+                                      { name: item.name },
+                                    )}
+                                    checked={isSelected}
+                                    onChange={(event) =>
+                                      setGroupSelected(
+                                        item.items,
+                                        event.currentTarget.checked,
+                                      )
+                                    }
+                                  />
+                                </td>
+                              ) : null}
                               <td className="ingredient-name-cell">
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                                   <button
@@ -601,13 +768,6 @@ export function FridgePage({
                                       {t('fridge.summary.nearExpiration')}
                                     </span>
                                   )}
-                                  <span
-                                    className={`opened-badge-button ${item.isOpened ? 'opened' : 'unopened'}`}
-                                  >
-                                    {item.isOpened
-                                      ? t('fridge.form.isOpened')
-                                      : t('fridge.status.unopened')}
-                                  </span>
                                 </div>
                               </td>
                               <td>
@@ -659,12 +819,21 @@ export function FridgePage({
       </main>
 
       {detailIngredient ? (
-        <div className="modal-backdrop" role="presentation">
+        <div
+          className="modal-backdrop"
+          role="presentation"
+          onClick={(event) => {
+            if (event.target === event.currentTarget) {
+              setDetailIngredient(null)
+            }
+          }}
+        >
           <section
             className="cook-modal ingredient-detail-modal"
             aria-labelledby="ingredient-detail-title"
             aria-modal="true"
             role="dialog"
+            onClick={(event) => event.stopPropagation()}
           >
             <p className="eyebrow">{t('fridge.detail.eyebrow')}</p>
             <h2 id="ingredient-detail-title">{detailIngredient.name}</h2>
@@ -697,7 +866,7 @@ export function FridgePage({
                     <strong>
                       {t('fridge.detail.itemLabel', { number: index + 1 })}
                     </strong>
-                    <span>{item.category || 'その他'}</span>
+                    <span>{getCategoryLabel(item.category || 'その他')}</span>
                   </div>
                   <dl>
                     <div>
@@ -731,16 +900,6 @@ export function FridgePage({
                     </button>
                     <button
                       type="button"
-                      className="small-button"
-                      onClick={() => void handleToggleOpened(item)}
-                      disabled={isSaving}
-                    >
-                      {item.isOpened
-                        ? t('fridge.action.markUnopened')
-                        : t('fridge.form.isOpened')}
-                    </button>
-                    <button
-                      type="button"
                       className="small-button danger-button"
                       onClick={() => void handleDeleteIngredient(item)}
                     >
@@ -758,6 +917,52 @@ export function FridgePage({
                 onClick={() => setDetailIngredient(null)}
               >
                 {t('common.close')}
+              </button>
+            </div>
+          </section>
+        </div>
+      ) : null}
+
+      {deleteConfirm ? (
+        <div
+          className="modal-backdrop"
+          role="presentation"
+          onClick={(event) => {
+            if (event.target === event.currentTarget && !isSaving) {
+              setDeleteConfirm(null)
+            }
+          }}
+        >
+          <section
+            className="cook-modal ingredient-delete-modal"
+            aria-labelledby="ingredient-delete-title"
+            aria-modal="true"
+            role="dialog"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <p className="eyebrow">{t('fridge.action.delete')}</p>
+            <h2 id="ingredient-delete-title">{t('fridge.action.delete')}</h2>
+            <p className="ingredient-detail-summary">
+              {deleteConfirm.message}
+            </p>
+            <div className="modal-actions">
+              <button
+                type="button"
+                className="secondary-button"
+                onClick={() => setDeleteConfirm(null)}
+                disabled={isSaving}
+              >
+                {t('common.cancel')}
+              </button>
+              <button
+                type="button"
+                className="secondary-button danger-button"
+                onClick={() =>
+                  void executeDeleteInventoryIds(deleteConfirm.inventoryIds)
+                }
+                disabled={isSaving}
+              >
+                {isSaving ? t('common.updating') : t('fridge.action.delete')}
               </button>
             </div>
           </section>
@@ -805,7 +1010,7 @@ export function FridgePage({
                 />
                 <datalist id="fridge-category-options">
                   {formCategories.map((cat) => (
-                    <option key={cat} value={cat} />
+                    <option key={cat} value={cat} label={getCategoryLabel(cat)} />
                   ))}
                 </datalist>
               </label>
@@ -856,19 +1061,6 @@ export function FridgePage({
                   onChange={(event) => updateFormField('memo', event.target.value)}
                   placeholder={t('fridge.form.memoPlaceholder')}
                 />
-              </label>
-              <label style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: '8px', cursor: 'pointer', gridColumn: 'span 2', padding: '8px 0' }}>
-                <input
-                  type="checkbox"
-                  checked={formState.isOpened}
-                  onChange={(event) =>
-                    setFormState((curr) => ({ ...curr, isOpened: event.target.checked }))
-                  }
-                  style={{ width: '18px', height: '18px', cursor: 'pointer' }}
-                />
-                <span style={{ fontSize: '0.9rem', userSelect: 'none', color: '#374151', fontWeight: '500' }}>
-                  {t('fridge.form.isOpened')}
-                </span>
               </label>
             </div>
 

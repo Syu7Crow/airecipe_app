@@ -138,6 +138,7 @@ export async function generateRecipes(
   servings = 2,
   language?: LanguageCode,
   avoidedIngredients?: string,
+  cookingRequest?: string,
 ) {
   const response = await fetch('/api/recipes/generate', {
     method: 'POST',
@@ -149,6 +150,7 @@ export async function generateRecipes(
       servings,
       language,
       avoidedIngredients,
+      cookingRequest,
     }),
   })
 

@@ -51,13 +51,6 @@ function isNearExpiration(ingredient: Ingredient, leadDays = 3) {
   return diffDays >= 0 && diffDays <= leadDays
 }
 
-function isLowStock(ingredient: Ingredient) {
-  const quantity = Number(ingredient.quantity ?? 0)
-  const gram = Number(ingredient.gram ?? 0)
-
-  return quantity <= 0 && gram <= 0
-}
-
 function buildSummaryItems(
   ingredients: Ingredient[],
   recipes: Recipe[],
@@ -73,9 +66,6 @@ function buildSummaryItems(
           isNearExpiration(ingredient, leadDays),
         ).length
       : 0
-  const lowStockCount = preferences.notifications.lowStock
-    ? ingredients.filter(isLowStock).length
-    : 0
   const favoriteCount = recipes.filter((recipe) => recipe.isFavorite).length
 
   return [
@@ -100,14 +90,6 @@ function buildSummaryItems(
       note: recipes.length
         ? t('home.summary.recipesNote')
         : t('home.summary.recipesEmptyNote'),
-    },
-    {
-      label: t('home.summary.lowStockLabel'),
-      value: String(lowStockCount),
-      note:
-        lowStockCount > 0
-          ? t('home.summary.lowStockNote')
-          : t('home.summary.lowStockEmptyNote'),
     },
     {
       label: t('home.summary.favoritesLabel'),
@@ -255,7 +237,7 @@ export function HomePage({
       <main className="home">
         <HeroPanel
           isGenerating={isGenerating}
-          onGenerateRecipe={handleGenerateRecipe}
+          onGenerateRecipe={() => onNavigate?.('recipe-generate')}
           onAddIngredient={() => onNavigate?.('fridge')}
           onScanReceipt={() => onNavigate?.('ingredient-register')}
           onShowRecipes={() => onNavigate?.('history')}

@@ -278,12 +278,7 @@ export function Topbar({ onNavigate, onLogout }: TopbarProps) {
           href="#recipes"
           onClick={(event) => {
             event.preventDefault()
-            onNavigate?.('home')
-            setTimeout(() => {
-              document
-                .getElementById('recipes')
-                ?.scrollIntoView({ behavior: 'smooth' })
-            }, 100)
+            onNavigate?.('recipe-generate')
           }}
         >
           {t('topbar.recipes')}
@@ -292,7 +287,7 @@ export function Topbar({ onNavigate, onLogout }: TopbarProps) {
           href="#receipt"
           onClick={(event) => {
             event.preventDefault()
-            onNavigate?.('receipt')
+            onNavigate?.('ingredient-register')
           }}
         >
           {t('topbar.receipt')}
