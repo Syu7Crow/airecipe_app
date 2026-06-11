@@ -253,6 +253,8 @@ export const frMessages: Record<MessageKey, string> = {
   'fridge.filter.search': 'Rechercher',
   'fridge.filter.searchPlaceholder': 'Rechercher par nom, catégorie ou mémo',
   'fridge.filter.category': 'Catégorie',
+  'fridge.filter.categoryAll': 'Toutes les catégories',
+  'fridge.filter.categorySelected': '{count} catégories sélectionnées',
   'fridge.filter.categoryHint':
     'Si rien n’est sélectionné, toutes les catégories sont affichées. Plusieurs catégories peuvent être sélectionnées.',
   'fridge.filter.expiration': 'Dates',

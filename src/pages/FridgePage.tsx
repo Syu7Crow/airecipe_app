@@ -268,6 +268,7 @@ export function FridgePage({
   const [error, setError] = useState<string | null>(null)
   const [statusMessage, setStatusMessage] = useState('')
   const [isFilterOpen, setIsFilterOpen] = useState(false)
+  const [isCategoryDropdownOpen, setIsCategoryDropdownOpen] = useState(false)
   const [selectedCategories, setSelectedCategories] = useState<Set<string>>(
     () => new Set(),
   )
@@ -479,6 +480,7 @@ export function FridgePage({
     setSearchQuery('')
     setSortMode('nameAsc')
     setExpirationFilter('all')
+    setIsCategoryDropdownOpen(false)
   }
 
   function resetFiltersForScroll() {
@@ -881,21 +883,38 @@ export function FridgePage({
             <div className="fridge-filter-options">
               <fieldset className="fridge-filter-group">
                 <legend>{t('fridge.filter.category')}</legend>
-                <p>{t('fridge.filter.categoryHint')}</p>
-                <div className="category-filters">
-                  {availableCategories.map((category) => (
-                    <button
-                      key={category}
-                      type="button"
-                      className={`filter-pill ${
-                        selectedCategories.has(category) ? 'active' : ''
-                      }`}
-                      aria-pressed={selectedCategories.has(category)}
-                      onClick={() => toggleCategoryFilter(category)}
-                    >
-                      {getCategoryLabel(category)}
-                    </button>
-                  ))}
+                <div className="fridge-category-dropdown">
+                  <button
+                    type="button"
+                    className="secondary-button fridge-category-dropdown__trigger"
+                    aria-expanded={isCategoryDropdownOpen}
+                    onClick={() =>
+                      setIsCategoryDropdownOpen((current) => !current)
+                    }
+                  >
+                    <span>
+                      {selectedCategories.size === 0
+                        ? t('fridge.filter.categoryAll')
+                        : t('fridge.filter.categorySelected', {
+                            count: selectedCategories.size,
+                          })}
+                    </span>
+                  </button>
+                  {isCategoryDropdownOpen ? (
+                    <div className="fridge-category-dropdown__menu">
+                      <p>{t('fridge.filter.categoryHint')}</p>
+                      {availableCategories.map((category) => (
+                        <label key={category} className="fridge-category-option">
+                          <input
+                            type="checkbox"
+                            checked={selectedCategories.has(category)}
+                            onChange={() => toggleCategoryFilter(category)}
+                          />
+                          <span>{getCategoryLabel(category)}</span>
+                        </label>
+                      ))}
+                    </div>
+                  ) : null}
                 </div>
               </fieldset>
 

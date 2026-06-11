@@ -239,6 +239,8 @@ export const jaMessages = {
   'fridge.filter.search': '検索',
   'fridge.filter.searchPlaceholder': '食材名・カテゴリ・メモで検索',
   'fridge.filter.category': 'カテゴリ',
+  'fridge.filter.categoryAll': 'すべてのカテゴリ',
+  'fridge.filter.categorySelected': '{count}カテゴリ選択中',
   'fridge.filter.categoryHint':
     '未選択の場合はすべてのカテゴリを表示します。複数選択できます。',
   'fridge.filter.expiration': '期限',

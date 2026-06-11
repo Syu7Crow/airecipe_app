@@ -1342,10 +1342,13 @@ button:disabled {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 18px;
+  align-items: start;
 }
 
 .settings-section {
+  display: grid;
   align-content: start;
+  gap: 18px;
 }
 
 .settings-ai-card .language-options {
@@ -1353,9 +1356,10 @@ button:disabled {
 }
 
 .settings-section__description {
-  margin: 0 0 18px;
+  margin: 0;
   color: var(--muted);
   font-size: 14px;
+  line-height: 1.7;
 }
 
 .settings-list {
@@ -1442,7 +1446,7 @@ button:disabled {
 }
 
 .settings-note {
-  margin: 14px 0 0;
+  margin: 0;
   font-weight: 800;
 }
 
@@ -1461,7 +1465,7 @@ button:disabled {
 
 .settings-preferences-form {
   display: grid;
-  gap: 14px;
+  gap: 18px;
 }
 
 .settings-field {
@@ -1557,12 +1561,12 @@ button:disabled {
 }
 
 .settings-admin-button {
-  margin-top: 16px;
+  margin-top: 0;
 }
 
 .settings-account-card {
   display: grid;
-  gap: 14px;
+  gap: 18px;
 }
 
 .settings-account-card .settings-section__description,
@@ -1571,7 +1575,7 @@ button:disabled {
 }
 
 .settings-account-card .settings-session-row {
-  margin-top: 2px;
+  margin-top: 0;
 }
 
 .contact-page,
@@ -2032,7 +2036,7 @@ button:disabled {
 
 .fridge-filter-options {
   display: grid;
-  grid-template-columns: minmax(260px, 1fr) minmax(180px, 220px) minmax(180px, 220px) auto;
+  grid-template-columns: minmax(180px, 240px) minmax(180px, 220px) minmax(180px, 220px) auto;
   gap: 14px;
   align-items: end;
   padding-top: 14px;
@@ -2051,6 +2055,58 @@ button:disabled {
   color: var(--muted);
   font-size: 12px;
   line-height: 1.5;
+}
+
+.fridge-category-dropdown {
+  position: relative;
+}
+
+.fridge-category-dropdown__trigger {
+  width: 100%;
+  min-height: 42px;
+  justify-content: space-between;
+}
+
+.fridge-category-dropdown__menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 20;
+  display: grid;
+  gap: 4px;
+  width: min(280px, calc(100vw - 48px));
+  max-height: 280px;
+  overflow: auto;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.fridge-category-dropdown__menu p {
+  margin: 0 0 6px;
+}
+
+.fridge-category-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px;
+  border-radius: 6px;
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.fridge-category-option:hover {
+  background: var(--surface-soft);
+}
+
+.fridge-category-option input {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--ink);
 }
 
 /* Category Filters */

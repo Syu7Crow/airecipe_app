@@ -245,6 +245,8 @@ export const enMessages: Record<MessageKey, string> = {
   'fridge.filter.search': 'Search',
   'fridge.filter.searchPlaceholder': 'Search by name, category, or memo',
   'fridge.filter.category': 'Category',
+  'fridge.filter.categoryAll': 'All categories',
+  'fridge.filter.categorySelected': '{count} categories selected',
   'fridge.filter.categoryHint':
     'When nothing is selected, every category is shown. You can select multiple categories.',
   'fridge.filter.expiration': 'Date filter',
