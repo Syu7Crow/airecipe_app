@@ -1638,6 +1638,59 @@ button:disabled {
   overflow-wrap: anywhere;
 }
 
+.admin-reply-form {
+  display: grid;
+  gap: 10px;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+}
+
+.admin-reply-form label {
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.admin-reply-form textarea {
+  width: 100%;
+  min-height: 110px;
+  box-sizing: border-box;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 12px;
+  color: var(--ink);
+  background: #fff;
+  font: inherit;
+  line-height: 1.6;
+  resize: vertical;
+}
+
+.admin-reply-form .settings-save-button {
+  justify-self: start;
+}
+
+.messages-page {
+  max-width: 1040px;
+}
+
+.messages-panel {
+  display: grid;
+  gap: 18px;
+}
+
+.user-message-list {
+  display: grid;
+  gap: 14px;
+}
+
+.user-message-card {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 18px;
+  background: #fff;
+}
+
 .settings-session-row {
   display: flex;
   align-items: center;
@@ -3242,8 +3295,14 @@ button:disabled {
   flex-shrink: 0;
 }
 
+.notification-item__icon--message {
+  background-color: rgba(74, 91, 122, 0.08);
+  color: var(--ink);
+}
+
 .notification-item__content {
   flex-grow: 1;
+  min-width: 0;
 }
 
 .notification-item__title {
@@ -3258,6 +3317,10 @@ button:disabled {
   margin: 0 0 6px 0;
   font-size: 12px;
   line-height: 1.3;
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
 }
 
 .notification-item__days {

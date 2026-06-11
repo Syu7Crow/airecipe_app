@@ -74,6 +74,9 @@ const SettingsPage = lazy(() =>
 const ContactPage = lazy(() =>
   import('./pages/ContactPage').then((m) => ({ default: m.ContactPage })),
 )
+const MessagesPage = lazy(() =>
+  import('./pages/MessagesPage').then((m) => ({ default: m.MessagesPage })),
+)
 const AdminConsolePage = lazy(() =>
   import('./pages/AdminConsolePage').then((m) => ({
     default: m.AdminConsolePage,
@@ -115,6 +118,8 @@ function getPageFromPath(): AppDestination {
       return 'settings'
     case '/contact':
       return 'contact'
+    case '/messages':
+      return 'messages'
     case '/admin':
       return 'admin'
     default:
@@ -530,6 +535,11 @@ function App() {
     case 'contact':
       pageNode = (
         <ContactPage onNavigate={handleNavigate} onLogout={handleLogout} />
+      )
+      break
+    case 'messages':
+      pageNode = (
+        <MessagesPage onNavigate={handleNavigate} onLogout={handleLogout} />
       )
       break
     case 'admin':

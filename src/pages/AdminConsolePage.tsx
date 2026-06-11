@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type FormEvent } from 'react'
 import { Icon } from '../components/Icon'
 import {
   fetchAdminContactMessages,
+  sendAdminContactReply,
   type ContactMessage,
 } from '../lib/contactApi'
 import { useI18n } from '../lib/useI18n'
@@ -38,6 +39,9 @@ export function AdminConsolePage({
   const [messages, setMessages] = useState<ContactMessage[]>([])
   const [isLoading, setIsLoading] = useState(user.isAdmin)
   const [errorMessage, setErrorMessage] = useState('')
+  const [replyDrafts, setReplyDrafts] = useState<Record<string, string>>({})
+  const [replyFeedback, setReplyFeedback] = useState<Record<string, string>>({})
+  const [sendingReplyId, setSendingReplyId] = useState<string | null>(null)
 
   useEffect(() => {
     if (!user.isAdmin) {
@@ -67,6 +71,58 @@ export function AdminConsolePage({
       isMounted = false
     }
   }, [t, user.isAdmin])
+
+  async function handleReplySubmit(
+    event: FormEvent,
+    message: ContactMessage,
+  ) {
+    event.preventDefault()
+
+    const body = replyDrafts[message.contactId]?.trim() ?? ''
+
+    if (!body) {
+      setReplyFeedback((current) => ({
+        ...current,
+        [message.contactId]: t('admin.replyRequired'),
+      }))
+      return
+    }
+
+    setSendingReplyId(message.contactId)
+    setReplyFeedback((current) => ({
+      ...current,
+      [message.contactId]: '',
+    }))
+
+    try {
+      await sendAdminContactReply({
+        contactId: message.contactId,
+        title: t('message.replyTitle', { subject: message.subject }),
+        body,
+      })
+      setMessages((current) =>
+        current.map((item) =>
+          item.contactId === message.contactId
+            ? { ...item, status: 'replied', updatedAt: new Date().toISOString() }
+            : item,
+        ),
+      )
+      setReplyDrafts((current) => ({ ...current, [message.contactId]: '' }))
+      setReplyFeedback((current) => ({
+        ...current,
+        [message.contactId]: t('admin.replySuccess'),
+      }))
+    } catch (error) {
+      console.error('[vite] Admin contact reply failed:', error)
+      setReplyFeedback((current) => ({
+        ...current,
+        [message.contactId]:
+          error instanceof Error ? error.message : t('admin.replyFailed'),
+      }))
+    } finally {
+      setSendingReplyId(null)
+    }
+  }
 
   return (
     <>
@@ -142,6 +198,41 @@ export function AdminConsolePage({
                       {t('admin.pageUrl')}: {message.pageUrl}
                     </p>
                   ) : null}
+                  <form
+                    className="admin-reply-form"
+                    onSubmit={(event) => handleReplySubmit(event, message)}
+                  >
+                    <label htmlFor={`reply-${message.contactId}`}>
+                      {t('admin.replyLabel')}
+                    </label>
+                    <textarea
+                      id={`reply-${message.contactId}`}
+                      rows={4}
+                      value={replyDrafts[message.contactId] ?? ''}
+                      placeholder={t('admin.replyPlaceholder')}
+                      disabled={sendingReplyId === message.contactId}
+                      onChange={(event) =>
+                        setReplyDrafts((current) => ({
+                          ...current,
+                          [message.contactId]: event.target.value,
+                        }))
+                      }
+                    />
+                    {replyFeedback[message.contactId] ? (
+                      <p className="settings-note">
+                        {replyFeedback[message.contactId]}
+                      </p>
+                    ) : null}
+                    <button
+                      type="submit"
+                      className="primary-button settings-save-button"
+                      disabled={sendingReplyId === message.contactId}
+                    >
+                      {sendingReplyId === message.contactId
+                        ? t('admin.replySending')
+                        : t('admin.replySubmit')}
+                    </button>
+                  </form>
                 </article>
               ))}
             </div>
