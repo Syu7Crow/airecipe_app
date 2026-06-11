@@ -825,7 +825,7 @@ button:disabled {
 }
 
 .favorite-button.is-active {
-  border-color: rgba(138, 74, 63, 0.26);
+  border-color: rgba(220, 38, 38, 0.26);
   color: var(--danger);
   background: #fffcfb;
 }
@@ -1342,13 +1342,14 @@ button:disabled {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 18px;
-  align-items: start;
+  align-items: stretch;
 }
 
 .settings-section {
   display: grid;
   align-content: start;
   gap: 18px;
+  height: 100%;
 }
 
 .settings-ai-card .language-options {
@@ -1712,7 +1713,7 @@ button:disabled {
 
 .danger-button {
   flex: 0 0 auto;
-  border-color: rgba(138, 74, 63, 0.22);
+  border-color: rgba(220, 38, 38, 0.24);
   color: var(--danger);
   background: #fffcfb;
 }
@@ -2357,7 +2358,7 @@ button:disabled {
 }
 
 .expiration-warning {
-  color: var(--danger);
+  color: var(--warning);
   font-weight: bold;
 }
 
@@ -2366,9 +2367,9 @@ button:disabled {
 }
 
 .expiry-alert {
-  color: var(--danger);
+  color: var(--warning);
   font-weight: bold;
-  background: rgba(138, 74, 63, 0.12);
+  background: rgba(245, 158, 11, 0.14);
   padding: 2px 8px;
   border-radius: 12px;
   font-size: 0.72rem;
@@ -3485,13 +3486,13 @@ button:disabled {
 }
 
 .notification-item__days.urgent {
-  background-color: rgba(239, 68, 68, 0.12);
-  color: #ef4444;
+  background-color: rgba(220, 38, 38, 0.12);
+  color: var(--danger);
 }
 
 .notification-item__days.warning {
   background-color: rgba(245, 158, 11, 0.12);
-  color: #d97706;
+  color: var(--warning);
 }
 
 .notification-item__days.info {
@@ -3508,16 +3509,16 @@ button:disabled {
 
 /* Expired row and badge styles */
 .fridge-table tr.expired-row {
-  background-color: rgba(138, 74, 63, 0.04);
+  background-color: rgba(220, 38, 38, 0.04);
 }
 .fridge-table tr.expired-row:hover {
-  background-color: rgba(138, 74, 63, 0.08);
+  background-color: rgba(220, 38, 38, 0.08);
 }
 
 .expiry-alert.expired-badge {
   color: var(--danger);
-  background: rgba(138, 74, 63, 0.12);
-  border: 1px solid rgba(138, 74, 63, 0.2);
+  background: rgba(220, 38, 38, 0.12);
+  border: 1px solid rgba(220, 38, 38, 0.22);
 }
 
 .expiration-expired {

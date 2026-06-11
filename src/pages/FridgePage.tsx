@@ -824,8 +824,8 @@ export function FridgePage({
                 role={summary.nearExpirationCount > 0 ? 'button' : undefined}
                 tabIndex={summary.nearExpirationCount > 0 ? 0 : undefined}
                 style={{
-                  border: summary.nearExpirationCount > 0 ? '1px solid rgba(138, 111, 46, 0.4)' : undefined,
-                  background: summary.nearExpirationCount > 0 ? 'rgba(138, 111, 46, 0.02)' : undefined,
+                  border: summary.nearExpirationCount > 0 ? '1px solid rgba(245, 158, 11, 0.45)' : undefined,
+                  background: summary.nearExpirationCount > 0 ? 'rgba(245, 158, 11, 0.04)' : undefined,
                 }}
               >
                 <span className="card-label" style={{ color: summary.nearExpirationCount > 0 ? 'var(--warning)' : undefined }}>
@@ -844,8 +844,8 @@ export function FridgePage({
                 role={summary.expiredCount > 0 ? 'button' : undefined}
                 tabIndex={summary.expiredCount > 0 ? 0 : undefined}
                 style={{
-                  border: summary.expiredCount > 0 ? '1px solid rgba(138, 74, 63, 0.4)' : undefined,
-                  background: summary.expiredCount > 0 ? 'rgba(138, 74, 63, 0.02)' : undefined,
+                  border: summary.expiredCount > 0 ? '1px solid rgba(220, 38, 38, 0.45)' : undefined,
+                  background: summary.expiredCount > 0 ? 'rgba(220, 38, 38, 0.04)' : undefined,
                 }}
               >
                 <span className="card-label" style={{ color: summary.expiredCount > 0 ? 'var(--danger)' : undefined }}>
