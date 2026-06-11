@@ -367,7 +367,7 @@ button:disabled {
   width: 36%;
   height: 28%;
   border-radius: 48% 52% 40% 60%;
-  background: #ffffff;
+  background: #fcfcfc;
 }
 
 .plate__greens {
@@ -2492,7 +2492,7 @@ button:disabled {
   margin: 0;
   padding: 14px 20px;
   background: var(--control-ink);
-  color: #ffffff;
+  color: #fcfcfc;
   font-size: 18px;
   font-weight: 800;
   border-bottom: 1px solid var(--line);
