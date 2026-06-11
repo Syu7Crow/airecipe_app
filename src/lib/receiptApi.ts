@@ -1,10 +1,13 @@
 import { postJson } from './apiClient'
 import type { Ingredient, ReceiptIngredientCandidate } from '../types/ui'
 
-export async function parseReceiptText(ocrText: string) {
+export async function parseReceiptText(
+  ocrText: string,
+  registrationDate: string,
+) {
   return postJson<{
     items: ReceiptIngredientCandidate[]
-  }>('/api/receipts/parse', { ocrText })
+  }>('/api/receipts/parse', { ocrText, registrationDate })
 }
 
 function dispatchInventoryUpdated() {

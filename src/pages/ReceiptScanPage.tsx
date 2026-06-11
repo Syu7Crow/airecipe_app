@@ -29,6 +29,12 @@ function normalizeCandidates(items: ReceiptIngredientCandidate[]) {
   }))
 }
 
+function todayLocalIsoDate() {
+  const date = new Date()
+  const offsetDate = new Date(date.getTime() - date.getTimezoneOffset() * 60000)
+  return offsetDate.toISOString().slice(0, 10)
+}
+
 const ignoredReceiptLinePattern =
   /(合計|小計|税込|税率|消費税|現計|釣銭|お預り|お預かり|ポイント|袋|レジ|領収|電話|TEL|カード|クレジット|割引|値引|対象|店舗|担当|No\.|合計点数|買上|お買上|単価|外税|内税|軽減|登録番号|インボイス|ありがとうございました)/i
 
@@ -180,7 +186,7 @@ export function ReceiptScanPage({
     setErrorMessage('')
 
     try {
-      const result = await parseReceiptText(text)
+      const result = await parseReceiptText(text, todayLocalIsoDate())
       setCandidates(normalizeCandidates(result.items))
       setStatusMessage(successMessage)
       setIsParsing(false)

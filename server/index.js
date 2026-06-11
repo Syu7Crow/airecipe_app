@@ -1232,6 +1232,7 @@ async function handleReceiptParse(request, response) {
     body = await readJsonBody(request)
     const result = await parseReceiptText({
       ocrText: body?.ocrText,
+      registrationDate: body?.registrationDate,
     })
 
     sendJson(response, 200, {

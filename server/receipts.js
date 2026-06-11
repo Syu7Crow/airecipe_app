@@ -172,6 +172,7 @@ function normalizeItem(item, index) {
     category,
     quantity,
     gram,
+    bestBeforeDate: item?.bestBeforeDate ? String(item.bestBeforeDate) : null,
     expirationDate: item?.expirationDate ? String(item.expirationDate) : null,
     memo: item?.memo ? String(item.memo) : 'レシートOCR',
     selected: item?.selected !== false,
@@ -200,12 +201,13 @@ function extractReceiptProductLines(ocrText) {
     .slice(0, 30)
 }
 
-function buildReceiptPrompt(ocrText, productLines) {
+function buildReceiptPrompt(ocrText, productLines, registrationDate) {
   const candidateText = productLines
     .map((line, index) => `${index + 1}. ${line}`)
     .join('\n')
 
   return `以下は日本のスーパー等のレシートOCR結果です。食材として在庫登録すべき商品だけを抽出してください。
+送信日・登録日: ${registrationDate}
 
 条件:
 - 返答はJSONのみ。Markdownや説明文は禁止。
@@ -217,8 +219,11 @@ function buildReceiptPrompt(ocrText, productLines) {
 - category は 野菜 / 肉 / 魚 / 卵 / 乳製品 / 主食 / 調味料 / 加工品 / 飲料 / その他 のどれかにしてください。
 - quantity は個数・本数・パック数として分かる場合だけ数値にしてください。
 - gram はgやml換算できる場合だけ数値にしてください。mlはgram欄で扱ってください。
-- expirationDate は判断できない場合 null にしてください。
-- 賞味期限が不明な場合でも、カテゴリから期限を仮置きしすぎないでください。
+- bestBeforeDate と expirationDate は YYYY-MM-DD 形式にしてください。
+- レシート上に賞味期限・消費期限がある場合は、その日付を最優先してください。
+- 賞味期限・消費期限が分からない場合は、送信日・登録日を基準に食材名とカテゴリから一般的な保存期間を推定して含めてください。
+- 生鮮食品や傷みやすい食品は expirationDate を必ず推定してください。常温保存の調味料・飲料・乾物・主食などは bestBeforeDate を中心に推定してください。
+- どちらか一方しか自然でない場合でも、もう一方は null ではなく近い目安日を入れてください。
 - selected は true にしてください。
 - sourceLine に元の商品候補行を入れてください。
 
@@ -236,7 +241,8 @@ JSON形式:
       "category": "野菜",
       "quantity": 1,
       "gram": null,
-      "expirationDate": null,
+      "bestBeforeDate": "2026-06-14",
+      "expirationDate": "2026-06-13",
       "memo": "レシートOCR",
       "selected": true,
       "sourceLine": "コマツナ 128"
@@ -268,6 +274,7 @@ export function fallbackParseReceiptText(ocrText) {
       category: inferCategory(name, 'その他'),
       quantity: inferQuantityFromText(line) ?? 1,
       gram: inferGramFromText(line),
+      bestBeforeDate: null,
       expirationDate: null,
       memo: 'レシートOCR',
       selected: true,
@@ -275,8 +282,12 @@ export function fallbackParseReceiptText(ocrText) {
   })
 }
 
-export async function parseReceiptText({ ocrText }) {
+export async function parseReceiptText({ ocrText, registrationDate }) {
   const text = String(ocrText ?? '').trim()
+  const requestDate =
+    typeof registrationDate === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(registrationDate)
+      ? registrationDate
+      : todayIsoDate()
 
   if (!text) {
     throw new Error('ocrText is required')
@@ -295,7 +306,7 @@ export async function parseReceiptText({ ocrText }) {
         },
         {
           role: 'user',
-          content: buildReceiptPrompt(text, productLines),
+          content: buildReceiptPrompt(text, productLines, requestDate),
         },
       ],
       temperature: 0.05,
