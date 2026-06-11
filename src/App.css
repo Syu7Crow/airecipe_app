@@ -2843,7 +2843,7 @@ button:disabled {
 }
 
 .register-method-label.is-active .register-method-label__icon {
-  background: rgba(255, 255, 255, 0.14);
+  background: #fff;
 }
 
 .register-method-label__sub {
