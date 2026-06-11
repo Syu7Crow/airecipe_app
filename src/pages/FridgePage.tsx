@@ -15,6 +15,7 @@ type Summary = {
   totalCount: number
   uniqueNamesCount: number
   nearExpirationCount: number
+  expiredCount: number
 }
 
 type FridgeSortMode =
@@ -223,6 +224,9 @@ function buildSummary(ingredients: Ingredient[]): Summary {
     nearExpirationCount: ingredients.filter((item) =>
       isNearExpiration(item.expirationDate) || isNearExpiration(item.bestBeforeDate),
     ).length,
+    expiredCount: ingredients.filter((item) =>
+      isExpired(item.expirationDate) || isExpired(item.bestBeforeDate),
+    ).length,
   }
 }
 
@@ -428,7 +432,7 @@ export function FridgePage({
   const expiredInventoryIds = useMemo(
     () =>
       ingredients
-        .filter((item) => isExpired(item.expirationDate))
+        .filter((item) => isExpired(item.expirationDate) || isExpired(item.bestBeforeDate))
         .map((item) => item.inventoryId)
         .filter((id): id is number => typeof id === 'number'),
     [ingredients],
@@ -475,6 +479,36 @@ export function FridgePage({
     setSearchQuery('')
     setSortMode('nameAsc')
     setExpirationFilter('all')
+  }
+
+  function resetFiltersForScroll() {
+    setSelectedCategories(new Set())
+    setSearchQuery('')
+    setSortMode('nameAsc')
+    setExpirationFilter('all')
+  }
+
+  function scrollToMarkedRow(selector: string) {
+    setTimeout(() => {
+      const targetRow = document.querySelector(selector)
+      if (targetRow) {
+        targetRow.scrollIntoView({ behavior: 'smooth', block: 'center' })
+        targetRow.classList.add('flash-highlight')
+        setTimeout(() => {
+          targetRow.classList.remove('flash-highlight')
+        }, 2000)
+      }
+    }, 120)
+  }
+
+  function handleScrollToNearExpiration() {
+    resetFiltersForScroll()
+    scrollToMarkedRow('[data-near-expiration="true"]')
+  }
+
+  function handleScrollToExpired() {
+    resetFiltersForScroll()
+    scrollToMarkedRow('[data-expired="true"]')
   }
 
   useEffect(() => {
@@ -782,12 +816,43 @@ export function FridgePage({
                 <strong className="card-value">{summary.uniqueNamesCount}</strong>
                 <span className="card-note">{t('fridge.summary.uniqueNote')}</span>
               </div>
-              <div className="summary-card">
-                <span className="card-label">{t('fridge.summary.nearExpiration')}</span>
-                <strong className="card-value">{summary.nearExpirationCount}</strong>
+              <div
+                className={`summary-card ${summary.nearExpirationCount > 0 ? 'clickable' : ''}`}
+                onClick={summary.nearExpirationCount > 0 ? handleScrollToNearExpiration : undefined}
+                role={summary.nearExpirationCount > 0 ? 'button' : undefined}
+                tabIndex={summary.nearExpirationCount > 0 ? 0 : undefined}
+                style={{
+                  border: summary.nearExpirationCount > 0 ? '1px solid rgba(138, 111, 46, 0.4)' : undefined,
+                  background: summary.nearExpirationCount > 0 ? 'rgba(138, 111, 46, 0.02)' : undefined,
+                }}
+              >
+                <span className="card-label" style={{ color: summary.nearExpirationCount > 0 ? 'var(--warning)' : undefined }}>
+                  {t('fridge.summary.nearExpiration')}
+                </span>
+                <strong className="card-value" style={{ color: summary.nearExpirationCount > 0 ? 'var(--warning)' : undefined }}>
+                  {summary.nearExpirationCount}
+                </strong>
                 <span className="card-note">
                   {t('fridge.summary.nearExpirationNote')}
                 </span>
+              </div>
+              <div
+                className={`summary-card ${summary.expiredCount > 0 ? 'clickable' : ''}`}
+                onClick={summary.expiredCount > 0 ? handleScrollToExpired : undefined}
+                role={summary.expiredCount > 0 ? 'button' : undefined}
+                tabIndex={summary.expiredCount > 0 ? 0 : undefined}
+                style={{
+                  border: summary.expiredCount > 0 ? '1px solid rgba(138, 74, 63, 0.4)' : undefined,
+                  background: summary.expiredCount > 0 ? 'rgba(138, 74, 63, 0.02)' : undefined,
+                }}
+              >
+                <span className="card-label" style={{ color: summary.expiredCount > 0 ? 'var(--danger)' : undefined }}>
+                  {t('fridge.summary.expired')}
+                </span>
+                <strong className="card-value" style={{ color: summary.expiredCount > 0 ? 'var(--danger)' : undefined }}>
+                  {summary.expiredCount}
+                </strong>
+                <span className="card-note">{t('fridge.summary.expiredNote')}</span>
               </div>
             </section>
 
@@ -973,15 +1038,32 @@ export function FridgePage({
                       </thead>
                       <tbody>
                         {items.map((item) => {
+                          const isExpiredItem =
+                            isExpired(item.nearestExpirationDate) ||
+                            isExpired(item.nearestBestBeforeDate)
                           const isWarning =
-                            isNearExpiration(item.nearestExpirationDate) ||
-                            isNearExpiration(item.nearestBestBeforeDate)
+                            !isExpiredItem &&
+                            (isNearExpiration(item.nearestExpirationDate) ||
+                              isNearExpiration(item.nearestBestBeforeDate))
                           const itemIds = getInventoryIds(item.items)
                           const isSelected =
                             itemIds.length > 0 &&
                             itemIds.every((id) => selectedInventoryIds.has(id))
+                          
+                          let rowClassName = ''
+                          if (isExpiredItem) {
+                            rowClassName = 'expired-row'
+                          } else if (isWarning) {
+                            rowClassName = 'near-expiration-row'
+                          }
+
                           return (
-                            <tr key={item.key} className={isWarning ? 'near-expiration-row' : ''}>
+                            <tr
+                              key={item.key}
+                              className={rowClassName}
+                              data-expired={isExpiredItem ? "true" : undefined}
+                              data-near-expiration={isWarning ? "true" : undefined}
+                            >
                               {isSelectionMode ? (
                                 <td>
                                   <input
@@ -1009,6 +1091,12 @@ export function FridgePage({
                                   >
                                     {item.name}
                                   </button>
+                                  {isExpiredItem && (
+                                    <span className="expiry-alert expired-badge">
+                                      <Icon name="bell" />
+                                      {t('fridge.summary.expired')}
+                                    </span>
+                                  )}
                                   {isWarning && (
                                     <span className="expiry-alert">
                                       <Icon name="bell" />
@@ -1028,12 +1116,24 @@ export function FridgePage({
                                 </span>
                               </td>
                               <td>
-                                <span className={isNearExpiration(item.nearestBestBeforeDate) ? 'expiration-warning' : ''}>
+                                <span className={
+                                  isExpired(item.nearestBestBeforeDate)
+                                    ? 'expiration-expired'
+                                    : isNearExpiration(item.nearestBestBeforeDate)
+                                    ? 'expiration-warning'
+                                    : ''
+                                }>
                                   {formatDate(item.nearestBestBeforeDate, language)}
                                 </span>
                               </td>
                               <td>
-                                <span className={isNearExpiration(item.nearestExpirationDate) ? 'expiration-warning' : ''}>
+                                <span className={
+                                  isExpired(item.nearestExpirationDate)
+                                    ? 'expiration-expired'
+                                    : isNearExpiration(item.nearestExpirationDate)
+                                    ? 'expiration-warning'
+                                    : ''
+                                }>
                                   {formatDate(item.nearestExpirationDate, language)}
                                 </span>
                               </td>
@@ -1249,19 +1349,21 @@ export function FridgePage({
               </label>
               <label>
                 <span>{t('fridge.form.category')}</span>
-                <input
-                  list="fridge-category-options"
+                <select
                   value={formState.category}
                   onChange={(event) =>
                     updateFormField('category', event.target.value)
                   }
-                  placeholder={t('fridge.form.categorySelect')}
-                />
-                <datalist id="fridge-category-options">
+                >
+                  <option value="" disabled>
+                    {t('fridge.form.categorySelect')}
+                  </option>
                   {formCategories.map((cat) => (
-                    <option key={cat} value={cat} label={getCategoryLabel(cat)} />
+                    <option key={cat} value={cat}>
+                      {getCategoryLabel(cat)}
+                    </option>
                   ))}
-                </datalist>
+                </select>
               </label>
               <label>
                 <span>{t('fridge.form.quantity')}</span>

@@ -231,6 +231,8 @@ export const jaMessages = {
   'fridge.summary.uniqueNote': '食材名のバリエーション',
   'fridge.summary.nearExpiration': '期限が近い',
   'fridge.summary.nearExpirationNote': '残り3日以内の食材',
+  'fridge.summary.expired': '期限切れ',
+  'fridge.summary.expiredNote': '期限を過ぎた食材',
   'fridge.filter.all': 'すべて',
   'fridge.filter.title': 'フィルター設定',
   'fridge.filter.open': 'フィルター設定',

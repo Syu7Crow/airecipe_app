@@ -245,6 +245,8 @@ export const frMessages: Record<MessageKey, string> = {
   'fridge.summary.uniqueNote': 'Variations de noms d’ingrédients',
   'fridge.summary.nearExpiration': 'Bientôt périmés',
   'fridge.summary.nearExpirationNote': 'Ingrédients périmant sous 3 jours',
+  'fridge.summary.expired': 'Périmés',
+  'fridge.summary.expiredNote': 'Ingrédients dont la date est dépassée',
   'fridge.filter.all': 'Tous',
   'fridge.filter.title': 'Réglages de filtre',
   'fridge.filter.open': 'Réglages de filtre',

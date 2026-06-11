@@ -3470,3 +3470,46 @@ button:disabled {
   color: var(--muted);
   font-size: 13px;
 }
+
+/* Expired row and badge styles */
+.fridge-table tr.expired-row {
+  background-color: rgba(138, 74, 63, 0.04);
+}
+.fridge-table tr.expired-row:hover {
+  background-color: rgba(138, 74, 63, 0.08);
+}
+
+.expiry-alert.expired-badge {
+  color: var(--danger);
+  background: rgba(138, 74, 63, 0.12);
+  border: 1px solid rgba(138, 74, 63, 0.2);
+}
+
+.expiration-expired {
+  color: var(--danger);
+  font-weight: 900;
+}
+
+/* Flash highlight animation for scrolling target */
+@keyframes row-flash {
+  0% {
+    background-color: rgba(245, 158, 11, 0.4);
+  }
+  100% {
+    background-color: transparent;
+  }
+}
+
+.fridge-table tr.flash-highlight {
+  animation: row-flash 2s ease-out;
+}
+
+/* Make summary cards clickable */
+.summary-card.clickable {
+  cursor: pointer;
+  user-select: none;
+}
+.summary-card.clickable:active {
+  transform: scale(0.98);
+}
+
