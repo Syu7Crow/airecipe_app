@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Icon } from '../components/Icon'
 import { supportedLanguages } from '../lib/i18n'
 import { getCache, setCache } from '../lib/dataCache'
@@ -26,11 +26,13 @@ export function SettingsPage({
   const [preferences, setPreferences] =
     useState<UserPreferences>(defaultPreferences)
   const [isLoadingPreferences, setIsLoadingPreferences] = useState(true)
-  const [isSavingPreferences, setIsSavingPreferences] = useState(false)
   const [preferencesError, setPreferencesError] = useState('')
   const [preferencesFeedbackArea, setPreferencesFeedbackArea] =
     useState<PreferencesFeedbackArea>('preferences')
   const [toastMessage, setToastMessage] = useState('')
+  const preferencesRef = useRef<UserPreferences>(defaultPreferences)
+  const saveTimerRef = useRef<number | null>(null)
+  const saveRequestRef = useRef(0)
   const toastTimerRef = useRef<number | null>(null)
   const currentLanguage = useMemo(
     () =>
@@ -47,6 +49,7 @@ export function SettingsPage({
     if (cached) {
       queueMicrotask(() => {
         if (isMounted) {
+          preferencesRef.current = cached
           setPreferences(cached)
           setIsLoadingPreferences(false)
         }
@@ -57,6 +60,7 @@ export function SettingsPage({
       .then((result) => {
         if (isMounted) {
           setCache(cacheKey, result.preferences)
+          preferencesRef.current = result.preferences
           setPreferences(result.preferences)
           setPreferencesError('')
           setIsLoadingPreferences(false)
@@ -85,6 +89,10 @@ export function SettingsPage({
         window.clearTimeout(toastTimerRef.current)
         toastTimerRef.current = null
       }
+      if (saveTimerRef.current !== null) {
+        window.clearTimeout(saveTimerRef.current)
+        saveTimerRef.current = null
+      }
     }
   }, [])
 
@@ -103,48 +111,81 @@ export function SettingsPage({
   function updatePreference<K extends keyof UserPreferences>(
     key: K,
     value: UserPreferences[K],
+    feedbackArea: PreferencesFeedbackArea,
   ) {
-    setPreferences((current) => ({ ...current, [key]: value }))
-    setPreferencesError('')
+    applyPreferences(
+      {
+        ...preferencesRef.current,
+        [key]: value,
+      },
+      feedbackArea,
+    )
   }
 
   function updateNotificationPreference(
     key: keyof UserPreferences['notifications'],
     value: boolean | number,
   ) {
-    setPreferences((current) => ({
-      ...current,
-      notifications: {
-        ...current.notifications,
-        [key]: value,
+    applyPreferences(
+      {
+        ...preferencesRef.current,
+        notifications: {
+          ...preferencesRef.current.notifications,
+          [key]: value,
+        },
       },
-    }))
-    setPreferencesError('')
+      'account',
+    )
   }
 
-  async function handlePreferencesSubmit(
-    event: FormEvent,
+  function applyPreferences(
+    nextPreferences: UserPreferences,
     feedbackArea: PreferencesFeedbackArea,
   ) {
-    event.preventDefault()
+    preferencesRef.current = nextPreferences
+    setPreferences(nextPreferences)
     setPreferencesFeedbackArea(feedbackArea)
-    setIsSavingPreferences(true)
     setPreferencesError('')
+    schedulePreferencesSave(nextPreferences)
+  }
+
+  function schedulePreferencesSave(nextPreferences: UserPreferences) {
+    if (saveTimerRef.current !== null) {
+      window.clearTimeout(saveTimerRef.current)
+    }
+
+    saveTimerRef.current = window.setTimeout(() => {
+      saveTimerRef.current = null
+      void persistPreferences(nextPreferences)
+    }, 450)
+  }
+
+  async function persistPreferences(nextPreferences: UserPreferences) {
+    const requestId = saveRequestRef.current + 1
+    saveRequestRef.current = requestId
 
     try {
-      const result = await savePreferences(preferences)
+      const result = await savePreferences(nextPreferences)
+
+      if (requestId !== saveRequestRef.current) {
+        return
+      }
+
       setCache(`preferences:${user.id}`, result.preferences)
+      preferencesRef.current = result.preferences
       setPreferences(result.preferences)
       showToast(t('settings.preferencesSaved'))
-      setIsSavingPreferences(false)
     } catch (error) {
+      if (requestId !== saveRequestRef.current) {
+        return
+      }
+
       console.error('[vite] Preferences save failed:', error)
       setPreferencesError(
         error instanceof Error
           ? error.message
           : t('settings.preferencesSaveFailed'),
       )
-      setIsSavingPreferences(false)
     }
   }
 
@@ -155,7 +196,6 @@ export function SettingsPage({
           <div>
             <p className="eyebrow">{t('settings.eyebrow')}</p>
             <h1>{t('settings.title')}</h1>
-            <p className="settings-lead">{t('settings.subtitle')}</p>
           </div>
           <button
             type="button"
@@ -170,9 +210,8 @@ export function SettingsPage({
         </div>
 
         <section className="settings-grid" aria-label={t('settings.title')}>
-          <form
+          <article
             className="panel settings-section settings-preferences-form settings-ai-card"
-            onSubmit={(event) => handlePreferencesSubmit(event, 'ai')}
           >
             <div className="section-heading">
               <div>
@@ -204,8 +243,10 @@ export function SettingsPage({
                     }`}
                     role="radio"
                     aria-checked={preferences.recipeModel === modelOption}
-                    disabled={isLoadingPreferences || isSavingPreferences}
-                    onClick={() => updatePreference('recipeModel', modelOption)}
+                    disabled={isLoadingPreferences}
+                    onClick={() =>
+                      updatePreference('recipeModel', modelOption, 'ai')
+                    }
                   >
                     <strong>
                       {modelOption === 'gemini'
@@ -222,16 +263,7 @@ export function SettingsPage({
               </div>
             </fieldset>
 
-            <button
-              type="submit"
-              className="primary-button settings-save-button"
-              disabled={isLoadingPreferences || isSavingPreferences}
-            >
-              {isSavingPreferences
-                ? t('settings.savingPreferences')
-                : t('settings.savePreferences')}
-            </button>
-          </form>
+          </article>
 
           <article className="panel settings-section">
             <div className="section-heading">
@@ -265,9 +297,8 @@ export function SettingsPage({
             </p>
           </article>
 
-          <form
+          <article
             className="panel settings-section settings-preferences-form"
-            onSubmit={(event) => handlePreferencesSubmit(event, 'preferences')}
           >
             <div className="section-heading">
               <div>
@@ -298,11 +329,12 @@ export function SettingsPage({
                 min="1"
                 max="20"
                 value={preferences.defaultServings}
-                disabled={isLoadingPreferences || isSavingPreferences}
+                disabled={isLoadingPreferences}
                 onChange={(event) =>
                   updatePreference(
                     'defaultServings',
                     Math.max(1, Number(event.target.value) || 1),
+                    'preferences',
                   )
                 }
               />
@@ -318,9 +350,13 @@ export function SettingsPage({
                 rows={4}
                 value={preferences.avoidedIngredients}
                 placeholder={t('settings.avoidPlaceholder')}
-                disabled={isLoadingPreferences || isSavingPreferences}
+                disabled={isLoadingPreferences}
                 onChange={(event) =>
-                  updatePreference('avoidedIngredients', event.target.value)
+                  updatePreference(
+                    'avoidedIngredients',
+                    event.target.value,
+                    'preferences',
+                  )
                 }
               />
             </div>
@@ -343,8 +379,10 @@ export function SettingsPage({
                     }`}
                     role="radio"
                     aria-checked={preferences.seasoningMode === value}
-                    disabled={isLoadingPreferences || isSavingPreferences}
-                    onClick={() => updatePreference('seasoningMode', value)}
+                    disabled={isLoadingPreferences}
+                    onClick={() =>
+                      updatePreference('seasoningMode', value, 'preferences')
+                    }
                   >
                     <strong>{label}</strong>
                     <span>{note}</span>
@@ -353,20 +391,10 @@ export function SettingsPage({
               </div>
             </fieldset>
 
-            <button
-              type="submit"
-              className="primary-button settings-save-button"
-              disabled={isLoadingPreferences || isSavingPreferences}
-            >
-              {isSavingPreferences
-                ? t('settings.savingPreferences')
-                : t('settings.savePreferences')}
-            </button>
-          </form>
+          </article>
 
-          <form
+          <article
             className="panel settings-section settings-account-card settings-preferences-form"
-            onSubmit={(event) => handlePreferencesSubmit(event, 'account')}
           >
             <div className="section-heading">
               <div>
@@ -374,9 +402,6 @@ export function SettingsPage({
                 <h2>{t('settings.accountTitle')}</h2>
               </div>
             </div>
-            <p className="settings-section__description">
-              {t('settings.accountDescription')}
-            </p>
             <dl className="settings-list">
               <div>
                 <dt>{t('settings.email')}</dt>
@@ -418,7 +443,7 @@ export function SettingsPage({
                 <input
                   type="checkbox"
                   checked={preferences.notifications.expiration}
-                  disabled={isLoadingPreferences || isSavingPreferences}
+                  disabled={isLoadingPreferences}
                   onChange={(event) =>
                     updateNotificationPreference(
                       'expiration',
@@ -436,7 +461,7 @@ export function SettingsPage({
                   min="1"
                   max="30"
                   value={preferences.notifications.expirationLeadDays}
-                  disabled={isLoadingPreferences || isSavingPreferences}
+                  disabled={isLoadingPreferences}
                   onChange={(event) =>
                     updateNotificationPreference(
                       'expirationLeadDays',
@@ -455,17 +480,7 @@ export function SettingsPage({
               </p>
             ) : null}
 
-            <button
-              type="submit"
-              className="primary-button settings-save-button"
-              disabled={isLoadingPreferences || isSavingPreferences}
-            >
-              {isSavingPreferences
-                ? t('settings.savingPreferences')
-                : t('settings.savePreferences')}
-            </button>
-
-          </form>
+          </article>
         </section>
       </main>
 
