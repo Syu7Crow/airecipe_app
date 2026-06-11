@@ -451,14 +451,6 @@ export function SettingsPage({
                 </div>
               ) : null}
             </dl>
-            <button
-              type="button"
-              className="secondary-button settings-admin-button"
-              onClick={() => onNavigate?.('messages')}
-            >
-              <Icon name="message" />
-              <span>{t('settings.openMessages')}</span>
-            </button>
             {user.isAdmin ? (
               <button
                 type="button"

@@ -87,7 +87,9 @@ export function AdminConsolePage({
     const title =
       target.type === 'allUsers'
         ? t('admin.allUsersReplyTitle')
-        : t('message.replyTitle', { subject: target.subject })
+        : target.type === 'selected'
+          ? ''
+          : t('message.replyTitle', { subject: target.subject })
 
     setReplyTarget(target)
     setReplyTitle(title)

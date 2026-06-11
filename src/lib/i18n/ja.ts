@@ -115,7 +115,6 @@ export const jaMessages = {
   'settings.adminStatus': '管理権限',
   'settings.adminUser': 'adminユーザー',
   'settings.openAdminConsole': '管理コンソールを開く',
-  'settings.openMessages': 'メッセージを確認',
   'settings.languageTitle': '言語設定',
   'settings.languageDescription':
     'UI文言の切り替えに使います。設定はブラウザに保存されます。',

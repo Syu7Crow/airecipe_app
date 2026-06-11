@@ -374,7 +374,6 @@ export function Topbar({ onNavigate, onLogout }: TopbarProps) {
                         type="button"
                         className="notification-item"
                         onClick={() => {
-                          onNavigate?.('messages')
                           setIsOpen(false)
                         }}
                       >

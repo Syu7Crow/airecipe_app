@@ -37,7 +37,6 @@ export type AppDestination =
   | 'ingredient-register'
   | 'test'
   | 'settings'
-  | 'messages'
   | 'contact'
   | 'admin'
   | 'register'

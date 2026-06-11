@@ -1703,27 +1703,6 @@ button:disabled {
   box-sizing: border-box;
 }
 
-.messages-page {
-  max-width: 1040px;
-}
-
-.messages-panel {
-  display: grid;
-  gap: 18px;
-}
-
-.user-message-list {
-  display: grid;
-  gap: 14px;
-}
-
-.user-message-card {
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  padding: 18px;
-  background: #fff;
-}
-
 .settings-session-row {
   display: flex;
   align-items: center;
@@ -3568,4 +3547,3 @@ button:disabled {
 .summary-card.clickable:active {
   transform: scale(0.98);
 }
-

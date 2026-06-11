@@ -123,7 +123,6 @@ export const frMessages: Record<MessageKey, string> = {
   'settings.adminStatus': 'Droits admin',
   'settings.adminUser': 'Utilisateur admin',
   'settings.openAdminConsole': 'Ouvrir la console admin',
-  'settings.openMessages': 'Voir les messages',
   'settings.languageTitle': 'Langue',
   'settings.languageDescription':
     'Utilisée pour changer les textes de l’interface. Ce réglage est enregistré dans ce navigateur.',

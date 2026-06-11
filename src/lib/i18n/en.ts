@@ -118,7 +118,6 @@ export const enMessages: Record<MessageKey, string> = {
   'settings.adminStatus': 'Admin permission',
   'settings.adminUser': 'Admin user',
   'settings.openAdminConsole': 'Open admin console',
-  'settings.openMessages': 'View messages',
   'settings.languageTitle': 'Language',
   'settings.languageDescription':
     'Used for switching UI copy. The setting is saved in this browser.',
