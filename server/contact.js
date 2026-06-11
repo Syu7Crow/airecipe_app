@@ -78,11 +78,21 @@ export async function sendContactReplyForAdmin(user, input) {
   }
 
   const client = requireSupabaseAdmin()
-  const contactId = normalizeText(input?.contactId, 80)
+  const contactIds = Array.from(
+    new Set(
+      [
+        normalizeText(input?.contactId, 80),
+        ...(Array.isArray(input?.contactIds)
+          ? input.contactIds.map((id) => normalizeText(id, 80))
+          : []),
+      ].filter(Boolean),
+    ),
+  )
   const body = normalizeText(input?.body, 4000)
   const title = normalizeText(input?.title, 160) || 'お問い合わせへの返信'
+  const sendToAllUsers = input?.target === 'allUsers'
 
-  if (!contactId) {
+  if (!sendToAllUsers && contactIds.length === 0) {
     throw new Error('contactId is required')
   }
 
@@ -90,37 +100,76 @@ export async function sendContactReplyForAdmin(user, input) {
     throw new Error('body is required')
   }
 
-  const { data: contactMessage, error: contactError } = await client
-    .from('contact_messages')
-    .select('contact_id, user_id, user_email, subject')
-    .eq('contact_id', contactId)
-    .single()
+  if (sendToAllUsers) {
+    const { data: users, error: usersError } = await client
+      .from('users')
+      .select('user_id, user_mail')
+      .not('user_id', 'is', null)
 
-  if (contactError) {
-    throw new Error(`Failed to fetch contact message: ${contactError.message}`)
+    if (usersError) {
+      throw new Error(`Failed to fetch users: ${usersError.message}`)
+    }
+
+    const rows = (users ?? []).map((targetUser) => ({
+      contact_id: null,
+      user_id: targetUser.user_id,
+      user_email: targetUser.user_mail ?? null,
+      title,
+      body,
+      sender_user_id: user.id,
+    }))
+
+    if (!rows.length) {
+      throw new Error('target users are missing')
+    }
+
+    const { data, error } = await client
+      .from('user_messages')
+      .insert(rows)
+      .select(
+        'message_id, contact_id, user_id, user_email, title, body, read_at, created_at',
+      )
+
+    if (error) {
+      throw new Error(`Failed to send user messages: ${error.message}`)
+    }
+
+    return (data ?? []).map(normalizeUserMessage)
   }
 
-  if (!contactMessage?.user_id) {
+  const { data: contactMessages, error: contactError } = await client
+    .from('contact_messages')
+    .select('contact_id, user_id, user_email, subject')
+    .in('contact_id', contactIds)
+
+  if (contactError) {
+    throw new Error(`Failed to fetch contact messages: ${contactError.message}`)
+  }
+
+  const validMessages = (contactMessages ?? []).filter((message) =>
+    Boolean(message.user_id),
+  )
+
+  if (!validMessages.length) {
     throw new Error('contact message user is missing')
   }
 
   const { data, error } = await client
     .from('user_messages')
-    .insert({
-      contact_id: contactMessage.contact_id,
+    .insert(validMessages.map((contactMessage) => ({
+      contact_id: String(contactMessage.contact_id),
       user_id: contactMessage.user_id,
       user_email: contactMessage.user_email ?? null,
       title,
       body,
       sender_user_id: user.id,
-    })
+    })))
     .select(
       'message_id, contact_id, user_id, user_email, title, body, read_at, created_at',
     )
-    .single()
 
   if (error) {
-    throw new Error(`Failed to send user message: ${error.message}`)
+    throw new Error(`Failed to send user messages: ${error.message}`)
   }
 
   await client
@@ -129,9 +178,9 @@ export async function sendContactReplyForAdmin(user, input) {
       status: 'replied',
       updated_at: new Date().toISOString(),
     })
-    .eq('contact_id', contactId)
+    .in('contact_id', validMessages.map((message) => message.contact_id))
 
-  return normalizeUserMessage(data)
+  return (data ?? []).map(normalizeUserMessage)
 }
 
 export async function getMessagesForUser(userId) {

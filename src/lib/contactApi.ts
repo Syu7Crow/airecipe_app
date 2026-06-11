@@ -41,12 +41,14 @@ export async function fetchAdminContactMessages() {
 }
 
 export async function sendAdminContactReply(input: {
-  contactId: string
+  contactId?: string
+  contactIds?: string[]
+  target?: 'contacts' | 'allUsers'
   title?: string
   body: string
 }) {
   return postJson<{
-    userMessage: UserMessage
+    userMessages: UserMessage[]
   }>('/api/admin/contact-messages/reply', input)
 }
 

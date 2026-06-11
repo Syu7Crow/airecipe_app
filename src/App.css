@@ -1605,6 +1605,17 @@ button:disabled {
   background: #fff;
 }
 
+.admin-message-card--clickable {
+  cursor: pointer;
+}
+
+.admin-message-card--clickable:hover,
+.admin-message-card--clickable:focus-visible {
+  border-color: var(--subtle);
+  background: var(--surface-soft);
+  outline: none;
+}
+
 .admin-message-card__header {
   display: flex;
   justify-content: space-between;
@@ -1668,6 +1679,24 @@ button:disabled {
 
 .admin-reply-form .settings-save-button {
   justify-self: start;
+}
+
+.admin-bulk-actions {
+  margin: 0;
+}
+
+.admin-reply-modal {
+  width: min(620px, 100%);
+}
+
+.admin-reply-modal .settings-field {
+  margin-top: 12px;
+}
+
+.admin-reply-modal .settings-field input,
+.admin-reply-modal .settings-field textarea {
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .messages-page {
@@ -1952,6 +1981,78 @@ button:disabled {
   font-size: 12px;
 }
 
+.fridge-filter-panel {
+  display: grid;
+  gap: 14px;
+  margin-bottom: 24px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.fridge-filter-bar {
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) auto;
+  gap: 12px;
+  align-items: end;
+}
+
+.fridge-search-field,
+.fridge-filter-field {
+  display: grid;
+  gap: 7px;
+}
+
+.fridge-search-field span,
+.fridge-filter-field span,
+.fridge-filter-group legend {
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.fridge-search-field input,
+.fridge-filter-field select {
+  width: 100%;
+  min-height: 42px;
+  box-sizing: border-box;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 0 12px;
+  color: var(--ink);
+  background: #fff;
+  font: inherit;
+}
+
+.fridge-filter-toggle.is-active {
+  border-color: var(--ink);
+  color: var(--ink);
+}
+
+.fridge-filter-options {
+  display: grid;
+  grid-template-columns: minmax(260px, 1fr) minmax(180px, 220px) minmax(180px, 220px) auto;
+  gap: 14px;
+  align-items: end;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+}
+
+.fridge-filter-group {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: none;
+}
+
+.fridge-filter-group p {
+  margin: 4px 0 10px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
 /* Category Filters */
 .category-filters {
   display: flex;
@@ -1960,6 +2061,12 @@ button:disabled {
   margin-bottom: 28px;
   padding-bottom: 12px;
   border-bottom: 1px solid var(--line);
+}
+
+.fridge-filter-panel .category-filters {
+  margin: 0;
+  padding: 0;
+  border-bottom: none;
 }
 
 .fridge-bulk-actions {
@@ -1991,6 +2098,17 @@ button:disabled {
 
 .fridge-selection-cancel {
   margin-left: auto;
+}
+
+@media (max-width: 920px) {
+  .fridge-filter-bar,
+  .fridge-filter-options {
+    grid-template-columns: 1fr;
+  }
+
+  .fridge-filter-options {
+    align-items: stretch;
+  }
 }
 
 .filter-pill {

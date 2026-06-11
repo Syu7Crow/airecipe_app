@@ -91,7 +91,7 @@ function getExpiringInfo(ingredient: Ingredient, leadDays: number) {
     type = 'bestBefore'
   }
 
-  if (days === null) {
+  if (days === null || days < 0) {
     return null
   }
 

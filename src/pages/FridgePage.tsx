@@ -17,7 +17,14 @@ type Summary = {
   nearExpirationCount: number
 }
 
-const allCategoryKey = '__all__'
+type FridgeSortMode =
+  | 'nameAsc'
+  | 'expirationAsc'
+  | 'bestBeforeAsc'
+  | 'quantityDesc'
+  | 'gramDesc'
+
+type FridgeExpirationFilter = 'all' | 'near' | 'expired' | 'noDate'
 
 type IngredientFormState = {
   inventoryId?: number
@@ -256,7 +263,14 @@ export function FridgePage({
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [statusMessage, setStatusMessage] = useState('')
-  const [activeCategory, setActiveCategory] = useState(allCategoryKey)
+  const [isFilterOpen, setIsFilterOpen] = useState(false)
+  const [selectedCategories, setSelectedCategories] = useState<Set<string>>(
+    () => new Set(),
+  )
+  const [searchQuery, setSearchQuery] = useState('')
+  const [sortMode, setSortMode] = useState<FridgeSortMode>('nameAsc')
+  const [expirationFilter, setExpirationFilter] =
+    useState<FridgeExpirationFilter>('all')
   const [formState, setFormState] = useState<IngredientFormState>(emptyForm)
   const [isFormOpen, setIsFormOpen] = useState(false)
   const [detailIngredient, setDetailIngredient] =
@@ -273,9 +287,107 @@ export function FridgePage({
     () => aggregateIngredients(ingredients, language),
     [ingredients, language],
   )
+  const availableCategories = useMemo(
+    () =>
+      sortCategoryNames(
+        Array.from(
+          new Set(aggregatedIngredients.map((item) => item.category || 'その他')),
+        ),
+        language,
+      ),
+    [aggregatedIngredients, language],
+  )
+  const filteredAggregatedIngredients = useMemo(() => {
+    const normalizedSearch = searchQuery.trim().toLocaleLowerCase()
+    const isCategoryAll = selectedCategories.size === 0
+
+    return aggregatedIngredients
+      .filter((item) => {
+        if (!isCategoryAll && !selectedCategories.has(item.category)) {
+          return false
+        }
+
+        if (normalizedSearch) {
+          const searchTarget = [
+            item.name,
+            item.category,
+            item.memo,
+            ...item.items.flatMap((ingredient) => [
+              ingredient.name,
+              ingredient.category ?? '',
+              ingredient.memo ?? '',
+            ]),
+          ]
+            .join(' ')
+            .toLocaleLowerCase()
+
+          if (!searchTarget.includes(normalizedSearch)) {
+            return false
+          }
+        }
+
+        if (expirationFilter === 'near') {
+          return (
+            isNearExpiration(item.nearestExpirationDate) ||
+            isNearExpiration(item.nearestBestBeforeDate)
+          )
+        }
+
+        if (expirationFilter === 'expired') {
+          return item.items.some((ingredient) =>
+            isExpired(ingredient.expirationDate),
+          )
+        }
+
+        if (expirationFilter === 'noDate') {
+          return item.items.every(
+            (ingredient) =>
+              !ingredient.expirationDate && !ingredient.bestBeforeDate,
+          )
+        }
+
+        return true
+      })
+      .toSorted((left, right) => {
+        switch (sortMode) {
+          case 'expirationAsc':
+            return (
+              getDateTime(left.nearestExpirationDate) -
+                getDateTime(right.nearestExpirationDate) ||
+              left.name.localeCompare(right.name, language)
+            )
+          case 'bestBeforeAsc':
+            return (
+              getDateTime(left.nearestBestBeforeDate) -
+                getDateTime(right.nearestBestBeforeDate) ||
+              left.name.localeCompare(right.name, language)
+            )
+          case 'quantityDesc':
+            return (
+              right.quantity - left.quantity ||
+              left.name.localeCompare(right.name, language)
+            )
+          case 'gramDesc':
+            return (
+              right.gram - left.gram ||
+              left.name.localeCompare(right.name, language)
+            )
+          case 'nameAsc':
+          default:
+            return left.name.localeCompare(right.name, language)
+        }
+      })
+  }, [
+    aggregatedIngredients,
+    expirationFilter,
+    language,
+    searchQuery,
+    selectedCategories,
+    sortMode,
+  ])
   const groupedIngredients = useMemo(
     () =>
-      aggregatedIngredients.reduce(
+      filteredAggregatedIngredients.reduce(
         (groups, item) => {
           const category = item.category || 'その他'
           groups[category] ??= []
@@ -284,7 +396,7 @@ export function FridgePage({
         },
         {} as Record<string, AggregatedIngredient[]>,
       ),
-    [aggregatedIngredients],
+    [filteredAggregatedIngredients],
   )
   const sortedCategoryEntries = useMemo(
     () =>
@@ -309,13 +421,6 @@ export function FridgePage({
       ).toSorted((left, right) => compareCategoryNames(left, right, language)),
     [ingredients, language],
   )
-  const categories = useMemo(
-    () => [
-      allCategoryKey,
-      ...sortCategoryNames(Object.keys(groupedIngredients), language),
-    ],
-    [groupedIngredients, language],
-  )
   const allInventoryIds = useMemo(
     () => getInventoryIds(ingredients),
     [ingredients],
@@ -328,9 +433,11 @@ export function FridgePage({
         .filter((id): id is number => typeof id === 'number'),
     [ingredients],
   )
-  const displayActiveCategory = categories.includes(activeCategory)
-    ? activeCategory
-    : allCategoryKey
+  const isFilterActive =
+    selectedCategories.size > 0 ||
+    searchQuery.trim() !== '' ||
+    sortMode !== 'nameAsc' ||
+    expirationFilter !== 'all'
 
   function getCategoryLabel(category: string) {
     switch (category) {
@@ -347,6 +454,27 @@ export function FridgePage({
       default:
         return category
     }
+  }
+
+  function toggleCategoryFilter(category: string) {
+    setSelectedCategories((current) => {
+      const next = new Set(current)
+
+      if (next.has(category)) {
+        next.delete(category)
+      } else {
+        next.add(category)
+      }
+
+      return next
+    })
+  }
+
+  function clearFilters() {
+    setSelectedCategories(new Set())
+    setSearchQuery('')
+    setSortMode('nameAsc')
+    setExpirationFilter('all')
   }
 
   useEffect(() => {
@@ -663,21 +791,101 @@ export function FridgePage({
               </div>
             </section>
 
-        <div className="category-filters">
-          {categories.map((category) => (
+        <section className="fridge-filter-panel" aria-label={t('fridge.filter.title')}>
+          <div className="fridge-filter-bar">
+            <label className="fridge-search-field">
+              <span>{t('fridge.filter.search')}</span>
+              <input
+                type="search"
+                value={searchQuery}
+                placeholder={t('fridge.filter.searchPlaceholder')}
+                onChange={(event) => setSearchQuery(event.target.value)}
+              />
+            </label>
             <button
-              key={category}
               type="button"
-              className={`filter-pill ${displayActiveCategory === category ? 'active' : ''
-                }`}
-              onClick={() => setActiveCategory(category)}
+              className={`secondary-button fridge-filter-toggle ${isFilterActive ? 'is-active' : ''}`}
+              aria-expanded={isFilterOpen}
+              onClick={() => setIsFilterOpen((current) => !current)}
             >
-              {category === allCategoryKey
-                ? t('fridge.filter.all')
-                : getCategoryLabel(category)}
+              {t('fridge.filter.open')}
             </button>
-          ))}
-        </div>
+          </div>
+
+          {isFilterOpen ? (
+            <div className="fridge-filter-options">
+              <fieldset className="fridge-filter-group">
+                <legend>{t('fridge.filter.category')}</legend>
+                <p>{t('fridge.filter.categoryHint')}</p>
+                <div className="category-filters">
+                  {availableCategories.map((category) => (
+                    <button
+                      key={category}
+                      type="button"
+                      className={`filter-pill ${
+                        selectedCategories.has(category) ? 'active' : ''
+                      }`}
+                      aria-pressed={selectedCategories.has(category)}
+                      onClick={() => toggleCategoryFilter(category)}
+                    >
+                      {getCategoryLabel(category)}
+                    </button>
+                  ))}
+                </div>
+              </fieldset>
+
+              <label className="fridge-filter-field">
+                <span>{t('fridge.filter.expiration')}</span>
+                <select
+                  value={expirationFilter}
+                  onChange={(event) =>
+                    setExpirationFilter(
+                      event.target.value as FridgeExpirationFilter,
+                    )
+                  }
+                >
+                  <option value="all">{t('fridge.filter.expirationAll')}</option>
+                  <option value="near">{t('fridge.filter.expirationNear')}</option>
+                  <option value="expired">
+                    {t('fridge.filter.expirationExpired')}
+                  </option>
+                  <option value="noDate">{t('fridge.filter.expirationNoDate')}</option>
+                </select>
+              </label>
+
+              <label className="fridge-filter-field">
+                <span>{t('fridge.filter.sort')}</span>
+                <select
+                  value={sortMode}
+                  onChange={(event) =>
+                    setSortMode(event.target.value as FridgeSortMode)
+                  }
+                >
+                  <option value="nameAsc">{t('fridge.filter.sortName')}</option>
+                  <option value="expirationAsc">
+                    {t('fridge.filter.sortExpiration')}
+                  </option>
+                  <option value="bestBeforeAsc">
+                    {t('fridge.filter.sortBestBefore')}
+                  </option>
+                  <option value="quantityDesc">
+                    {t('fridge.filter.sortQuantity')}
+                  </option>
+                  <option value="gramDesc">{t('fridge.filter.sortWeight')}</option>
+                </select>
+              </label>
+
+              <button
+                type="button"
+                className="secondary-button"
+                onClick={clearFilters}
+                disabled={!isFilterActive}
+              >
+                {t('fridge.filter.clear')}
+              </button>
+            </div>
+          ) : null}
+        </section>
 
         <div className="fridge-bulk-actions">
           <button
@@ -738,13 +946,12 @@ export function FridgePage({
             <div className="empty-state">
               {t('fridge.empty')}
             </div>
+          ) : filteredAggregatedIngredients.length === 0 ? (
+            <div className="empty-state">
+              {t('fridge.filter.noResults')}
+            </div>
           ) : (
             sortedCategoryEntries
-              .filter(
-                ([category]) =>
-                  displayActiveCategory === allCategoryKey ||
-                  displayActiveCategory === category,
-              )
               .map(([category, items]) => (
                 <div key={category} className="category-table-wrapper">
                   <h2 className="category-title">{getCategoryLabel(category)}</h2>

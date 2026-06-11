@@ -1007,11 +1007,11 @@ async function handleAdminContactMessages(user, response) {
 async function handleAdminContactReply(request, response, user) {
   try {
     const body = await readJsonBody(request)
-    const userMessage = await sendContactReplyForAdmin(user, body)
+    const userMessages = await sendContactReplyForAdmin(user, body)
 
     sendJson(response, 200, {
       ok: true,
-      userMessage,
+      userMessages,
     })
   } catch (error) {
     const message =
