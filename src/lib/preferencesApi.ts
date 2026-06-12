@@ -20,8 +20,14 @@ export async function fetchPreferences() {
 }
 
 export async function savePreferences(preferences: UserPreferences) {
-  return patchJson<{
+  const result = await patchJson<{
     userId: string
     preferences: UserPreferences
   }>('/api/preferences', { preferences })
+
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('preferences-updated'))
+  }
+
+  return result
 }

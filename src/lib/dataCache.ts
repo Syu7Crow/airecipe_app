@@ -48,4 +48,8 @@ function invalidateAllRelated(): void {
 
 if (typeof window !== 'undefined') {
   window.addEventListener('inventory-updated', invalidateAllRelated)
+  window.addEventListener('preferences-updated', () => {
+    invalidateCache('home:')
+    invalidateCache('recipe-generate:')
+  })
 }

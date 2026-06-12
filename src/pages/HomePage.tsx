@@ -189,6 +189,29 @@ export function HomePage({
     }
   }, [language, t])
 
+  useEffect(() => {
+    let isMounted = true
+
+    function handlePreferencesUpdated() {
+      void fetchPreferences()
+        .then((result) => {
+          if (isMounted) {
+            setPreferences(result.preferences)
+          }
+        })
+        .catch((error) => {
+          console.warn('[vite] Preferences refresh failed:', error)
+        })
+    }
+
+    window.addEventListener('preferences-updated', handlePreferencesUpdated)
+
+    return () => {
+      isMounted = false
+      window.removeEventListener('preferences-updated', handlePreferencesUpdated)
+    }
+  }, [])
+
   async function handleGenerateRecipe() {
     if (!ingredients.length) {
       setStatusMessage(t('home.status.generateEmpty'))
