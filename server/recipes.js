@@ -1,5 +1,5 @@
 import { createGroqChatCompletion, defaultGroqModel } from './groq.js'
-import { generateGeminiContent } from './gemini.js'
+import { defaultGeminiModel, generateGeminiContent } from './gemini.js'
 import { isSupabaseServiceRoleConfigured, supabase } from './supabase.js'
 
 const demoUserId = process.env.AI_RECIPE_DEMO_USER_ID
@@ -410,6 +410,7 @@ function buildRecipePrompt(
   avoidedIngredients = [],
   cookingRequest = '',
   seasoningMode = 'unlimited',
+  modelIdentity = '',
 ) {
   const text = textForLanguage(language)
   const avoidedIngredientList = Array.isArray(avoidedIngredients)
@@ -455,6 +456,7 @@ user_request: ${JSON.stringify(userRequest)}`
 - 期限が近い食材を優先してください。
 - 調理時間は30分以内を優先してください。
 - レシピ名、難易度、提案理由、タグ、手順、材料名は${text.name}で返してください。
+- モデル名やAPI名を求められた場合は「${modelIdentity}」だけを参照してください。GPT-4o、ChatGPT、OpenAIなど、ここにないモデル名を名乗ったりレシピ名に入れたりしないでください。
 ${avoidedIngredientsBlock}
 ${userRequestBlock}
 ${seasoningBlock}
@@ -714,6 +716,10 @@ export async function generateAndSaveRecipes({
   const normalizedLanguage = normalizeLanguage(language)
   const avoidedIngredientList = normalizeAvoidedIngredients(avoidedIngredients)
   const text = textForLanguage(normalizedLanguage)
+  const modelIdentity =
+    modelChoice === 'gemini'
+      ? `Gemini API / ${defaultGeminiModel}`
+      : `Groq API / ${defaultGroqModel}`
   const { userId, inventory } = await getInventoryForUser(
     requestedUserId,
     normalizedLanguage,
@@ -732,13 +738,15 @@ export async function generateAndSaveRecipes({
     avoidedIngredientList,
     cookingRequest,
     seasoningMode,
+    modelIdentity,
   )
 
-  const recipesJson =
+  const generationResult =
     modelChoice === 'gemini'
       ? await requestRecipeJsonFromGemini(text.assistant, userPrompt)
       : await requestRecipeJsonFromGroq(text.assistant, userPrompt)
 
+  const recipesJson = generationResult.json
   const recipes = toRecipeRows(recipesJson)
   const ingredientById = new Map(
     inventory.map((item) => [Number(item.ingredientId), item]),
@@ -810,6 +818,8 @@ export async function generateAndSaveRecipes({
   return {
     userId,
     recipes: savedRecipes,
+    modelProvider: generationResult.provider,
+    modelName: generationResult.model,
   }
 }
 
@@ -834,7 +844,11 @@ async function requestRecipeJsonFromGroq(systemPrompt, userPrompt) {
     throw new Error('Groq response was empty')
   }
 
-  return parseJsonFromModel(content)
+  return {
+    json: parseJsonFromModel(content),
+    provider: 'groq',
+    model: completion.model ?? defaultGroqModel,
+  }
 }
 
 async function requestRecipeJsonFromGemini(systemPrompt, userPrompt) {
@@ -853,7 +867,11 @@ async function requestRecipeJsonFromGemini(systemPrompt, userPrompt) {
     throw new Error('Gemini response was empty')
   }
 
-  return parseJsonFromModel(result.text)
+  return {
+    json: parseJsonFromModel(result.text),
+    provider: 'gemini',
+    model: result.model,
+  }
 }
 
 function unitUsesGram(unit) {

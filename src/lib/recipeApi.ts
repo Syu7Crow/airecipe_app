@@ -74,6 +74,8 @@ export async function generateRecipes(
   const result = await postJson<{
     userId: string
     recipes: Recipe[]
+    modelProvider?: 'gemini' | 'groq'
+    modelName?: string
   }>('/api/recipes/generate', {
     servings,
     language,

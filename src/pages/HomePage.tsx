@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { FeatureCard } from '../components/FeatureCard'
 import { HeroPanel } from '../components/HeroPanel'
 import { IngredientsPanel } from '../components/IngredientsPanel'
@@ -14,6 +14,7 @@ import {
   generateRecipes,
   markRecipeCooked,
 } from '../lib/recipeApi'
+import { formatRecipeModelSource } from '../lib/recipeModelLabel'
 import {
   defaultPreferences,
   fetchPreferences,
@@ -112,15 +113,38 @@ export function HomePage({
   const [isGenerating, setIsGenerating] = useState(false)
   const [isCooking, setIsCooking] = useState(false)
   const [statusMessage, setStatusMessage] = useState('')
+  const [toastMessage, setToastMessage] = useState('')
   const [cookingRecipe, setCookingRecipe] = useState<Recipe | null>(null)
   const [servings, setServings] = useState(1)
   const [preferences, setPreferences] =
     useState<UserPreferences>(defaultPreferences)
+  const toastTimerRef = useRef<number | null>(null)
   const secondaryFeatures = useMemo(() => getSecondaryFeatures(t), [t])
   const currentSummaryItems = useMemo(
     () => buildSummaryItems(ingredients, recipes, preferences, t),
     [ingredients, preferences, recipes, t],
   )
+
+  useEffect(() => {
+    return () => {
+      if (toastTimerRef.current !== null) {
+        window.clearTimeout(toastTimerRef.current)
+        toastTimerRef.current = null
+      }
+    }
+  }, [])
+
+  function showToast(message: string) {
+    if (toastTimerRef.current !== null) {
+      window.clearTimeout(toastTimerRef.current)
+    }
+
+    setToastMessage(message)
+    toastTimerRef.current = window.setTimeout(() => {
+      setToastMessage('')
+      toastTimerRef.current = null
+    }, 2400)
+  }
 
   useEffect(() => {
     let isMounted = true
@@ -192,7 +216,16 @@ export function HomePage({
   useEffect(() => {
     let isMounted = true
 
-    function handlePreferencesUpdated() {
+    function handlePreferencesUpdated(event: Event) {
+      const nextPreferences = (
+        event as CustomEvent<{ preferences?: UserPreferences }>
+      ).detail?.preferences
+
+      if (nextPreferences) {
+        setPreferences(nextPreferences)
+        return
+      }
+
       void fetchPreferences()
         .then((result) => {
           if (isMounted) {
@@ -233,7 +266,14 @@ export function HomePage({
 
       if (result.recipes.length) {
         setRecipes(result.recipes)
+        const modelSource = formatRecipeModelSource(
+          result.modelProvider,
+          result.modelName,
+        )
         setStatusMessage(t('home.status.generateSuccess'))
+        if (modelSource) {
+          showToast(modelSource)
+        }
       }
       setIsGenerating(false)
     } catch (error) {
@@ -390,6 +430,12 @@ export function HomePage({
               </button>
             </div>
           </section>
+        </div>
+      ) : null}
+
+      {toastMessage ? (
+        <div className="toast-message" role="status">
+          {toastMessage}
         </div>
       ) : null}
     </>

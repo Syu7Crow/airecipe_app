@@ -118,8 +118,7 @@ export const enMessages: Record<MessageKey, string> = {
   'settings.adminUser': 'Admin user',
   'settings.openAdminConsole': 'Open admin console',
   'settings.languageTitle': 'Language',
-  'settings.languageDescription':
-    'Used for switching UI copy. The setting is saved in this browser.',
+  'settings.languageDescription': 'Used for switching UI copy.',
   'settings.currentLanguage': 'Current language',
   'settings.preferencesTitle': 'Preferences',
   'settings.preferencesDescription':

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type FormEvent } from 'react'
+import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import { Icon } from '../components/Icon'
 import { RecipesPanel } from '../components/RecipesPanel'
 import { getCache, setCache } from '../lib/dataCache'
@@ -7,6 +7,7 @@ import {
   fetchSavedRecipes,
   generateRecipes,
 } from '../lib/recipeApi'
+import { formatRecipeModelSource } from '../lib/recipeModelLabel'
 import { defaultPreferences, fetchPreferences } from '../lib/preferencesApi'
 import { useI18n } from '../lib/useI18n'
 import type {
@@ -55,8 +56,10 @@ export function RecipeGeneratePage({
     useState<RecipeModelChoice>(defaultPreferences.recipeModel)
   const [cookingRequest, setCookingRequest] = useState('')
   const [statusMessage, setStatusMessage] = useState('')
+  const [toastMessage, setToastMessage] = useState('')
   const [isLoading, setIsLoading] = useState(true)
   const [isGenerating, setIsGenerating] = useState(false)
+  const toastTimerRef = useRef<number | null>(null)
 
   const visibleIngredients = useMemo(
     () => ingredients.slice(0, 12),
@@ -126,6 +129,49 @@ export function RecipeGeneratePage({
     }
   }, [language, t])
 
+  useEffect(() => {
+    function handlePreferencesUpdated(event: Event) {
+      const nextPreferences = (
+        event as CustomEvent<{ preferences?: UserPreferences }>
+      ).detail?.preferences
+
+      if (!nextPreferences) {
+        return
+      }
+
+      setPreferences(nextPreferences)
+      setServings(nextPreferences.defaultServings)
+      setSelectedModel(nextPreferences.recipeModel)
+    }
+
+    window.addEventListener('preferences-updated', handlePreferencesUpdated)
+
+    return () => {
+      window.removeEventListener('preferences-updated', handlePreferencesUpdated)
+    }
+  }, [])
+
+  useEffect(() => {
+    return () => {
+      if (toastTimerRef.current !== null) {
+        window.clearTimeout(toastTimerRef.current)
+        toastTimerRef.current = null
+      }
+    }
+  }, [])
+
+  function showToast(message: string) {
+    if (toastTimerRef.current !== null) {
+      window.clearTimeout(toastTimerRef.current)
+    }
+
+    setToastMessage(message)
+    toastTimerRef.current = window.setTimeout(() => {
+      setToastMessage('')
+      toastTimerRef.current = null
+    }, 2400)
+  }
+
   async function handleGenerate(event?: FormEvent<HTMLFormElement>) {
     event?.preventDefault()
 
@@ -148,7 +194,14 @@ export function RecipeGeneratePage({
       )
 
       setRecipes(result.recipes)
+      const modelSource = formatRecipeModelSource(
+        result.modelProvider,
+        result.modelName,
+      )
       setStatusMessage(t('recipeGenerate.generateSuccess'))
+      if (modelSource) {
+        showToast(modelSource)
+      }
       setIsGenerating(false)
     } catch (error) {
       setStatusMessage(
@@ -314,6 +367,12 @@ export function RecipeGeneratePage({
           </div>
         )}
       </main>
+
+      {toastMessage ? (
+        <div className="toast-message" role="status">
+          {toastMessage}
+        </div>
+      ) : null}
     </>
   )
 }

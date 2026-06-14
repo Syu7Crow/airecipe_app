@@ -4,7 +4,7 @@ import {
   fetchInventory,
   fetchSavedRecipes,
 } from './recipeApi'
-import { fetchPreferences } from './preferencesApi'
+import { dispatchPreferencesUpdated, fetchPreferences } from './preferencesApi'
 import type { Ingredient, Recipe, UserPreferences } from '../types/ui'
 
 export async function preloadAllPageData(): Promise<void> {
@@ -47,5 +47,6 @@ export async function preloadAllPageData(): Promise<void> {
 
   if (userId && preferencesData) {
     setCache(`preferences:${userId}`, preferencesData)
+    dispatchPreferencesUpdated(preferencesData)
   }
 }
