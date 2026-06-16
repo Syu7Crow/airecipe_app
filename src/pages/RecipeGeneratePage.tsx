@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type FormEvent } from 'react'
+import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import { Icon } from '../components/Icon'
 import { RecipesPanel } from '../components/RecipesPanel'
 import { getCache, setCache } from '../lib/dataCache'
@@ -7,9 +7,16 @@ import {
   fetchSavedRecipes,
   generateRecipes,
 } from '../lib/recipeApi'
+import { formatRecipeModelSource } from '../lib/recipeModelLabel'
 import { defaultPreferences, fetchPreferences } from '../lib/preferencesApi'
 import { useI18n } from '../lib/useI18n'
-import type { AppDestination, Ingredient, Recipe, UserPreferences } from '../types/ui'
+import type {
+  AppDestination,
+  Ingredient,
+  Recipe,
+  RecipeModelChoice,
+  UserPreferences,
+} from '../types/ui'
 
 type RecipeGeneratePageProps = {
   onNavigate?: (page: AppDestination) => void
@@ -45,10 +52,14 @@ export function RecipeGeneratePage({
   const [preferences, setPreferences] =
     useState<UserPreferences>(defaultPreferences)
   const [servings, setServings] = useState(defaultPreferences.defaultServings)
+  const [selectedModel, setSelectedModel] =
+    useState<RecipeModelChoice>(defaultPreferences.recipeModel)
   const [cookingRequest, setCookingRequest] = useState('')
   const [statusMessage, setStatusMessage] = useState('')
+  const [toastMessage, setToastMessage] = useState('')
   const [isLoading, setIsLoading] = useState(true)
   const [isGenerating, setIsGenerating] = useState(false)
+  const toastTimerRef = useRef<number | null>(null)
 
   const visibleIngredients = useMemo(
     () => ingredients.slice(0, 12),
@@ -69,6 +80,7 @@ export function RecipeGeneratePage({
       setRecipes(cached.recipes)
       setPreferences(cached.preferences)
       setServings(cached.preferences.defaultServings)
+      setSelectedModel(cached.preferences.recipeModel)
       setIsLoading(false)
     }
 
@@ -96,6 +108,7 @@ export function RecipeGeneratePage({
         setRecipes(recipesResult.recipes)
         setPreferences(preferencesResult.preferences)
         setServings(preferencesResult.preferences.defaultServings)
+        setSelectedModel(preferencesResult.preferences.recipeModel)
         setIsLoading(false)
       } catch (error) {
         if (isMounted) {
@@ -116,6 +129,49 @@ export function RecipeGeneratePage({
     }
   }, [language, t])
 
+  useEffect(() => {
+    function handlePreferencesUpdated(event: Event) {
+      const nextPreferences = (
+        event as CustomEvent<{ preferences?: UserPreferences }>
+      ).detail?.preferences
+
+      if (!nextPreferences) {
+        return
+      }
+
+      setPreferences(nextPreferences)
+      setServings(nextPreferences.defaultServings)
+      setSelectedModel(nextPreferences.recipeModel)
+    }
+
+    window.addEventListener('preferences-updated', handlePreferencesUpdated)
+
+    return () => {
+      window.removeEventListener('preferences-updated', handlePreferencesUpdated)
+    }
+  }, [])
+
+  useEffect(() => {
+    return () => {
+      if (toastTimerRef.current !== null) {
+        window.clearTimeout(toastTimerRef.current)
+        toastTimerRef.current = null
+      }
+    }
+  }, [])
+
+  function showToast(message: string) {
+    if (toastTimerRef.current !== null) {
+      window.clearTimeout(toastTimerRef.current)
+    }
+
+    setToastMessage(message)
+    toastTimerRef.current = window.setTimeout(() => {
+      setToastMessage('')
+      toastTimerRef.current = null
+    }, 2400)
+  }
+
   async function handleGenerate(event?: FormEvent<HTMLFormElement>) {
     event?.preventDefault()
 
@@ -133,12 +189,19 @@ export function RecipeGeneratePage({
         language,
         preferences.avoidedIngredients,
         cookingRequest,
-        preferences.recipeModel,
+        selectedModel,
         preferences.seasoningMode,
       )
 
       setRecipes(result.recipes)
+      const modelSource = formatRecipeModelSource(
+        result.modelProvider,
+        result.modelName,
+      )
       setStatusMessage(t('recipeGenerate.generateSuccess'))
+      if (modelSource) {
+        showToast(modelSource)
+      }
       setIsGenerating(false)
     } catch (error) {
       setStatusMessage(
@@ -212,6 +275,36 @@ export function RecipeGeneratePage({
               />
             </label>
 
+            <fieldset className="recipe-model-fieldset">
+              <legend>{t('settings.recipeModelTitle')}</legend>
+              <div className="language-options" role="radiogroup">
+                {(['gemini', 'groq'] as const).map((modelOption) => (
+                  <button
+                    key={modelOption}
+                    type="button"
+                    className={`language-option ${
+                      selectedModel === modelOption ? 'is-active' : ''
+                    }`}
+                    role="radio"
+                    aria-checked={selectedModel === modelOption}
+                    disabled={isGenerating || isLoading}
+                    onClick={() => setSelectedModel(modelOption)}
+                  >
+                    <strong>
+                      {modelOption === 'gemini'
+                        ? t('settings.recipeModelGemini')
+                        : t('settings.recipeModelGpt')}
+                    </strong>
+                    <span>
+                      {modelOption === 'gemini'
+                        ? t('settings.recipeModelGeminiNote')
+                        : t('settings.recipeModelGptNote')}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </fieldset>
+
             <button
               type="submit"
               className="primary-button"
@@ -274,6 +367,12 @@ export function RecipeGeneratePage({
           </div>
         )}
       </main>
+
+      {toastMessage ? (
+        <div className="toast-message" role="status">
+          {toastMessage}
+        </div>
+      ) : null}
     </>
   )
 }

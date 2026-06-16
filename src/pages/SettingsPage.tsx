@@ -5,6 +5,7 @@ import { getCache, setCache } from '../lib/dataCache'
 import { useI18n } from '../lib/useI18n'
 import {
   defaultPreferences,
+  dispatchPreferencesUpdated,
   fetchPreferences,
   savePreferences,
 } from '../lib/preferencesApi'
@@ -149,12 +150,19 @@ export function SettingsPage({
     )
   }
 
+  function updateDisplayLanguage(nextLanguage: UserPreferences['displayLanguage']) {
+    setLanguage(nextLanguage)
+    updatePreference('displayLanguage', nextLanguage, 'preferences')
+  }
+
   function applyPreferences(
     nextPreferences: UserPreferences,
     feedbackArea: PreferencesFeedbackArea,
   ) {
     preferencesRef.current = nextPreferences
     setPreferences(nextPreferences)
+    setCache(`preferences:${user.id}`, nextPreferences)
+    dispatchPreferencesUpdated(nextPreferences)
     setPreferencesFeedbackArea(feedbackArea)
     setPreferencesError('')
     schedulePreferencesSave(nextPreferences)
@@ -277,7 +285,6 @@ export function SettingsPage({
                 ))}
               </div>
             </fieldset>
-
           </article>
 
           <article className="panel settings-section">
@@ -300,7 +307,8 @@ export function SettingsPage({
                   }`}
                   role="radio"
                   aria-checked={language === item.code}
-                  onClick={() => setLanguage(item.code)}
+                  disabled={isLoadingPreferences}
+                  onClick={() => updateDisplayLanguage(item.code)}
                 >
                   <strong>{item.label}</strong>
                   <span>{item.description}</span>

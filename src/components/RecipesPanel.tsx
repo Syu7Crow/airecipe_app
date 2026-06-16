@@ -87,8 +87,10 @@ export const RecipesPanel = memo(function RecipesPanel({
                 <div className="recipe-amounts">
                   <strong>{t('home.recipes.serving')}</strong>
                   <ul>
-                    {recipe.ingredients.map((ingredient) => (
-                      <li key={ingredient.ingredientId}>
+                    {recipe.ingredients.map((ingredient, index) => (
+                      <li
+                        key={`${ingredient.ingredientId}-${ingredient.name}-${index}`}
+                      >
                         <span>{ingredient.name}</span>
                         <em>
                           {ingredient.amount}

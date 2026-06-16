@@ -195,6 +195,10 @@ export async function getMessagesForUser(userId) {
     .limit(100)
 
   if (error) {
+    if (isMissingUserMessagesTableError(error)) {
+      return []
+    }
+
     throw new Error(`Failed to fetch user messages: ${error.message}`)
   }
 
@@ -218,10 +222,24 @@ export async function markMessagesReadForUser(userId, messageIds = null) {
   const { error } = await query
 
   if (error) {
+    if (isMissingUserMessagesTableError(error)) {
+      return []
+    }
+
     throw new Error(`Failed to mark user messages read: ${error.message}`)
   }
 
   return getMessagesForUser(userId)
+}
+
+function isMissingUserMessagesTableError(error) {
+  return (
+    error?.code === 'PGRST205' ||
+    /user_messages/i.test(String(error?.message ?? '')) &&
+      /schema cache|does not exist|could not find/i.test(
+        String(error?.message ?? ''),
+      )
+  )
 }
 
 function normalizeContactMessage(message) {

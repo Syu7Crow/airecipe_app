@@ -4,7 +4,8 @@ import { getJson, patchJson } from './apiClient'
 export const defaultPreferences: UserPreferences = {
   defaultServings: 2,
   avoidedIngredients: '',
-  recipeModel: 'groq',
+  recipeModel: 'gemini',
+  displayLanguage: 'ja',
   seasoningMode: 'unlimited',
   notifications: {
     expiration: true,
@@ -19,9 +20,23 @@ export async function fetchPreferences() {
   }>('/api/preferences')
 }
 
+export function dispatchPreferencesUpdated(preferences: UserPreferences) {
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(
+      new CustomEvent('preferences-updated', {
+        detail: { preferences },
+      }),
+    )
+  }
+}
+
 export async function savePreferences(preferences: UserPreferences) {
-  return patchJson<{
+  const result = await patchJson<{
     userId: string
     preferences: UserPreferences
   }>('/api/preferences', { preferences })
+
+  dispatchPreferencesUpdated(result.preferences)
+
+  return result
 }

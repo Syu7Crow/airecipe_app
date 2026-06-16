@@ -153,11 +153,24 @@ export function Topbar({ currentPage, onNavigate, onLogout }: TopbarProps) {
     const handleMessagesUpdated = () => {
       loadData()
     }
+    const handlePreferencesUpdated = (event: Event) => {
+      const nextPreferences = (
+        event as CustomEvent<{ preferences?: UserPreferences }>
+      ).detail?.preferences
+
+      if (nextPreferences) {
+        setPreferences(nextPreferences)
+      } else {
+        loadData()
+      }
+    }
     window.addEventListener('inventory-updated', handleInventoryUpdated)
     window.addEventListener('messages-updated', handleMessagesUpdated)
+    window.addEventListener('preferences-updated', handlePreferencesUpdated)
     return () => {
       window.removeEventListener('inventory-updated', handleInventoryUpdated)
       window.removeEventListener('messages-updated', handleMessagesUpdated)
+      window.removeEventListener('preferences-updated', handlePreferencesUpdated)
     }
   }, [loadData])
 

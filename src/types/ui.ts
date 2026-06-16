@@ -106,6 +106,7 @@ export type UserPreferences = {
   defaultServings: number
   avoidedIngredients: string
   recipeModel: RecipeModelChoice
+  displayLanguage: 'ja' | 'en' | 'fr'
   seasoningMode: SeasoningMode
   notifications: {
     expiration: boolean
