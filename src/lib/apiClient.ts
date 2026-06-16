@@ -10,14 +10,12 @@ export class ApiError extends Error {
 }
 
 export async function readJson<T>(response: Response): Promise<T> {
-  const responseText = await response.text()
   let payload: ApiResponse<T>
 
   try {
-    payload = responseText
-      ? (JSON.parse(responseText) as ApiResponse<T>)
-      : ({ ok: false, message: response.statusText } as ApiFailure)
+    payload = (await response.json()) as ApiResponse<T>
   } catch {
+    const responseText = await response.text()
     throw new ApiError(
       responseText
         ? `API response was not JSON: ${responseText.slice(0, 120)}`

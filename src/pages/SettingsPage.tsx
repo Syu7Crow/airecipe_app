@@ -33,8 +33,6 @@ export function SettingsPage({
   const [toastMessage, setToastMessage] = useState('')
   const preferencesRef = useRef<UserPreferences>(defaultPreferences)
   const saveTimerRef = useRef<number | null>(null)
-  const saveRequestRef = useRef(0)
-  const hasPendingSaveRef = useRef(false)
   const toastTimerRef = useRef<number | null>(null)
   const currentLanguage = useMemo(
     () =>
@@ -94,9 +92,6 @@ export function SettingsPage({
       if (saveTimerRef.current !== null) {
         window.clearTimeout(saveTimerRef.current)
         saveTimerRef.current = null
-      }
-      if (hasPendingSaveRef.current) {
-        hasPendingSaveRef.current = false
         void savePreferences(preferencesRef.current)
           .then((result) => {
             setCache(`preferences:${user.id}`, result.preferences)
@@ -124,6 +119,7 @@ export function SettingsPage({
     key: K,
     value: UserPreferences[K],
     feedbackArea: PreferencesFeedbackArea,
+    delayMs = 0,
   ) {
     applyPreferences(
       {
@@ -131,12 +127,14 @@ export function SettingsPage({
         [key]: value,
       },
       feedbackArea,
+      delayMs,
     )
   }
 
   function updateNotificationPreference(
     key: keyof UserPreferences['notifications'],
     value: boolean | number,
+    delayMs = 0,
   ) {
     applyPreferences(
       {
@@ -147,6 +145,7 @@ export function SettingsPage({
         },
       },
       'account',
+      delayMs,
     )
   }
 
@@ -158,6 +157,7 @@ export function SettingsPage({
   function applyPreferences(
     nextPreferences: UserPreferences,
     feedbackArea: PreferencesFeedbackArea,
+    delayMs = 0,
   ) {
     preferencesRef.current = nextPreferences
     setPreferences(nextPreferences)
@@ -165,44 +165,31 @@ export function SettingsPage({
     dispatchPreferencesUpdated(nextPreferences)
     setPreferencesFeedbackArea(feedbackArea)
     setPreferencesError('')
-    schedulePreferencesSave(nextPreferences)
-  }
 
-  function schedulePreferencesSave(nextPreferences: UserPreferences) {
     if (saveTimerRef.current !== null) {
       window.clearTimeout(saveTimerRef.current)
     }
 
-    const requestId = saveRequestRef.current + 1
-    saveRequestRef.current = requestId
-    hasPendingSaveRef.current = true
+    if (delayMs <= 0) {
+      void persistPreferences(nextPreferences)
+      return
+    }
+
     saveTimerRef.current = window.setTimeout(() => {
       saveTimerRef.current = null
-      hasPendingSaveRef.current = false
-      void persistPreferences(nextPreferences, requestId)
-    }, 450)
+      void persistPreferences(nextPreferences)
+    }, delayMs)
   }
 
-  async function persistPreferences(
-    nextPreferences: UserPreferences,
-    requestId: number,
-  ) {
+  async function persistPreferences(nextPreferences: UserPreferences) {
     try {
       const result = await savePreferences(nextPreferences)
-
-      if (requestId !== saveRequestRef.current) {
-        return
-      }
 
       setCache(`preferences:${user.id}`, result.preferences)
       preferencesRef.current = result.preferences
       setPreferences(result.preferences)
       showToast(t('settings.preferencesSaved'))
     } catch (error) {
-      if (requestId !== saveRequestRef.current) {
-        return
-      }
-
       console.error('[vite] Preferences save failed:', error)
       setPreferencesError(
         error instanceof Error
@@ -379,6 +366,7 @@ export function SettingsPage({
                     'avoidedIngredients',
                     event.target.value,
                     'preferences',
+                    400,
                   )
                 }
               />

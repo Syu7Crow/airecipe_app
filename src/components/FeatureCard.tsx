@@ -1,7 +1,8 @@
+import { memo } from 'react'
 import type { Feature } from '../types/ui'
 import { Icon } from './Icon'
 
-export function FeatureCard({
+export const FeatureCard = memo(function FeatureCard({
   feature,
   onAction,
 }: {
@@ -23,4 +24,4 @@ export function FeatureCard({
       </button>
     </article>
   )
-}
+})

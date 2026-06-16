@@ -68,7 +68,6 @@ export async function generateRecipes(
   language?: LanguageCode,
   avoidedIngredients?: string,
   cookingRequest?: string,
-  model?: 'gemini' | 'groq',
   seasoningMode?: 'unlimited' | 'strict',
 ) {
   const result = await postJson<{
@@ -81,7 +80,6 @@ export async function generateRecipes(
     language,
     avoidedIngredients,
     cookingRequest,
-    model,
     seasoningMode,
   })
   dispatchInventoryUpdated()

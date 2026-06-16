@@ -1,3 +1,4 @@
+import { memo } from 'react'
 import { useI18n } from '../lib/useI18n'
 
 type SummaryItem = {
@@ -6,7 +7,11 @@ type SummaryItem = {
   note: string
 }
 
-export function SummaryGrid({ items }: { items: SummaryItem[] }) {
+export const SummaryGrid = memo(function SummaryGrid({
+  items,
+}: {
+  items: SummaryItem[]
+}) {
   const { t } = useI18n()
 
   return (
@@ -20,4 +25,4 @@ export function SummaryGrid({ items }: { items: SummaryItem[] }) {
       ))}
     </section>
   )
-}
+})

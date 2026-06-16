@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react'
+import { memo, type ReactNode } from 'react'
 import { Topbar } from './Topbar'
 import type { AppDestination } from '../types/ui'
 
@@ -9,11 +9,16 @@ type PageShellProps = {
   onLogout?: () => void | Promise<void>
 }
 
-export function PageShell({ children, currentPage, onNavigate, onLogout }: PageShellProps) {
+export const PageShell = memo(function PageShell({
+  children,
+  currentPage,
+  onNavigate,
+  onLogout,
+}: PageShellProps) {
   return (
     <div className="app-shell">
       <Topbar currentPage={currentPage} onNavigate={onNavigate} onLogout={onLogout} />
-      <div className="page-transition">{children}</div>
+      <div className="page-transition" key={currentPage}>{children}</div>
     </div>
   )
-}
+})

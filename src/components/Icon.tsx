@@ -1,3 +1,4 @@
+import { memo } from 'react'
 import type { IconName } from '../types/ui'
 
 const iconPaths: Record<IconName, string[]> = {
@@ -40,7 +41,7 @@ const iconPaths: Record<IconName, string[]> = {
   arrow: ['M5 12h14M13 6l6 6-6 6'],
 }
 
-export function Icon({ name }: { name: IconName }) {
+export const Icon = memo(function Icon({ name }: { name: IconName }) {
   return (
     <svg className="icon" viewBox="0 0 24 24" aria-hidden="true">
       {iconPaths[name].map((path) => (
@@ -48,4 +49,4 @@ export function Icon({ name }: { name: IconName }) {
       ))}
     </svg>
   )
-}
+})

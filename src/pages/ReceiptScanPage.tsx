@@ -142,6 +142,7 @@ export function ReceiptScanPage({
   const { t } = useI18n()
   const videoRef = useRef<HTMLVideoElement | null>(null)
   const cameraStreamRef = useRef<MediaStream | null>(null)
+  const activeTaskRef = useRef<string | null>(null)
   const [previewUrl, setPreviewUrl] = useState('')
   const [ocrText, setOcrText] = useState('')
   const [candidates, setCandidates] = useState<ReceiptIngredientCandidate[]>([])
@@ -175,23 +176,37 @@ export function ReceiptScanPage({
     }
   }, [previewUrl])
 
-  async function parseOcrText(text: string, successMessage: string) {
+  async function parseOcrText(text: string, successMessage: string, taskId?: string) {
     if (!text.trim()) {
-      setErrorMessage(t('receipt.ocrEmpty'))
+      if (!taskId || activeTaskRef.current === taskId) {
+        setErrorMessage(t('receipt.ocrEmpty'))
+      }
       return
     }
 
-    setIsParsing(true)
-    setStatusMessage(t('receipt.parseStatus'))
-    setErrorMessage('')
+    if (!taskId || activeTaskRef.current === taskId) {
+      setIsParsing(true)
+      setStatusMessage(t('receipt.parseStatus'))
+      setErrorMessage('')
+    }
 
     try {
       const result = await parseReceiptText(text, todayLocalIsoDate())
+
+      if (taskId && activeTaskRef.current !== taskId) {
+        return
+      }
+
       setCandidates(normalizeCandidates(result.items))
       setStatusMessage(successMessage)
       setIsParsing(false)
     } catch (error) {
       console.error('[vite] Receipt parse failed:', error)
+
+      if (taskId && activeTaskRef.current !== taskId) {
+        return
+      }
+
       const fallbackItems = localFallbackParseReceiptText(text)
 
       if (fallbackItems.length) {
@@ -211,6 +226,9 @@ export function ReceiptScanPage({
       return
     }
 
+    const taskId = createCandidateId()
+    activeTaskRef.current = taskId
+
     setPreviewUrl(URL.createObjectURL(file))
     setOcrText('')
     setCandidates([])
@@ -222,19 +240,30 @@ export function ReceiptScanPage({
 
     try {
       const text = await recognizeReceiptImage(file, (nextProgress, status) => {
+        if (activeTaskRef.current !== taskId) {
+          return
+        }
         setProgress(nextProgress)
         setProgressLabel(status)
       })
+
+      if (activeTaskRef.current !== taskId) {
+        return
+      }
+
       setOcrText(text)
-      await parseOcrText(
-        text,
-        t('receipt.parseSuccess'),
-      )
-      setIsReading(false)
+      await parseOcrText(text, t('receipt.parseSuccess'), taskId)
+
+      if (activeTaskRef.current === taskId) {
+        setIsReading(false)
+      }
     } catch (error) {
       console.error('[vite] Receipt OCR failed:', error)
-      setErrorMessage(t('receipt.readFailed'))
-      setIsReading(false)
+
+      if (activeTaskRef.current === taskId) {
+        setErrorMessage(t('receipt.readFailed'))
+        setIsReading(false)
+      }
     }
   }
 
@@ -383,6 +412,7 @@ export function ReceiptScanPage({
                 <input
                   type="file"
                   accept="image/*"
+                  disabled={isReading || isParsing}
                   onChange={(event) =>
                     handleFileChange(event.currentTarget.files?.[0] ?? null)
                   }

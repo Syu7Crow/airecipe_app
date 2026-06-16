@@ -14,7 +14,6 @@ import type {
   AppDestination,
   Ingredient,
   Recipe,
-  RecipeModelChoice,
   UserPreferences,
 } from '../types/ui'
 
@@ -52,8 +51,6 @@ export function RecipeGeneratePage({
   const [preferences, setPreferences] =
     useState<UserPreferences>(defaultPreferences)
   const [servings, setServings] = useState(defaultPreferences.defaultServings)
-  const [selectedModel, setSelectedModel] =
-    useState<RecipeModelChoice>(defaultPreferences.recipeModel)
   const [cookingRequest, setCookingRequest] = useState('')
   const [statusMessage, setStatusMessage] = useState('')
   const [toastMessage, setToastMessage] = useState('')
@@ -80,7 +77,6 @@ export function RecipeGeneratePage({
       setRecipes(cached.recipes)
       setPreferences(cached.preferences)
       setServings(cached.preferences.defaultServings)
-      setSelectedModel(cached.preferences.recipeModel)
       setIsLoading(false)
     }
 
@@ -108,7 +104,6 @@ export function RecipeGeneratePage({
         setRecipes(recipesResult.recipes)
         setPreferences(preferencesResult.preferences)
         setServings(preferencesResult.preferences.defaultServings)
-        setSelectedModel(preferencesResult.preferences.recipeModel)
         setIsLoading(false)
       } catch (error) {
         if (isMounted) {
@@ -127,7 +122,7 @@ export function RecipeGeneratePage({
     return () => {
       isMounted = false
     }
-  }, [language, t])
+  }, [language])
 
   useEffect(() => {
     function handlePreferencesUpdated(event: Event) {
@@ -189,7 +184,6 @@ export function RecipeGeneratePage({
         language,
         preferences.avoidedIngredients,
         cookingRequest,
-        selectedModel,
         preferences.seasoningMode,
       )
 
@@ -274,36 +268,6 @@ export function RecipeGeneratePage({
                 }
               />
             </label>
-
-            <fieldset className="recipe-model-fieldset">
-              <legend>{t('settings.recipeModelTitle')}</legend>
-              <div className="language-options" role="radiogroup">
-                {(['gemini', 'groq'] as const).map((modelOption) => (
-                  <button
-                    key={modelOption}
-                    type="button"
-                    className={`language-option ${
-                      selectedModel === modelOption ? 'is-active' : ''
-                    }`}
-                    role="radio"
-                    aria-checked={selectedModel === modelOption}
-                    disabled={isGenerating || isLoading}
-                    onClick={() => setSelectedModel(modelOption)}
-                  >
-                    <strong>
-                      {modelOption === 'gemini'
-                        ? t('settings.recipeModelGemini')
-                        : t('settings.recipeModelGpt')}
-                    </strong>
-                    <span>
-                      {modelOption === 'gemini'
-                        ? t('settings.recipeModelGeminiNote')
-                        : t('settings.recipeModelGptNote')}
-                    </span>
-                  </button>
-                ))}
-              </div>
-            </fieldset>
 
             <button
               type="submit"

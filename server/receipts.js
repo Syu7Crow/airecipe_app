@@ -344,41 +344,6 @@ export async function parseReceiptText({ ocrText, registrationDate }) {
   }
 }
 
-async function findOrCreateIngredient({ client, userId, item }) {
-  const { data: existing, error: fetchError } = await client
-    .from('ingredient_management')
-    .select('ingredient_id, ingredient_name, category')
-    .eq('user_id', userId)
-    .eq('ingredient_name', item.name)
-    .limit(1)
-    .maybeSingle()
-
-  if (fetchError) {
-    throw new Error(`Failed to find ingredient: ${fetchError.message}`)
-  }
-
-  if (existing) {
-    return existing
-  }
-
-  const { data, error } = await client
-    .from('ingredient_management')
-    .insert({
-      user_id: userId,
-      ingredient_name: item.name,
-      category: item.category,
-      barcode: `receipt-${Date.now()}`,
-    })
-    .select('ingredient_id, ingredient_name, category')
-    .single()
-
-  if (error) {
-    throw new Error(`Failed to create ingredient: ${error.message}`)
-  }
-
-  return data
-}
-
 function fallbackExpirationDate(item) {
   if (item.expirationDate) {
     return item.expirationDate
@@ -414,34 +379,81 @@ export async function importReceiptItems({
     throw new Error('No receipt items selected')
   }
 
-  const imported = []
+  const uniqueNames = Array.from(new Set(selectedItems.map((item) => item.name)))
+  const { data: existingRows, error: fetchError } = await client
+    .from('ingredient_management')
+    .select('ingredient_id, ingredient_name')
+    .eq('user_id', userId)
+    .in('ingredient_name', uniqueNames)
 
-  for (const item of selectedItems) {
-    const ingredient = await findOrCreateIngredient({ client, userId, item })
-    const { data, error } = await client
-      .from('inventory')
-      .insert({
-        ingredient_id: ingredient.ingredient_id,
-        user_id: userId,
-        quantity: item.quantity,
-        gram: item.gram,
-        purchase_date: todayIsoDate(),
-        expiration_date: fallbackExpirationDate(item),
-        memo: item.memo ?? 'レシートOCR',
-      })
-      .select('inventory_id')
-      .single()
+  if (fetchError) {
+    throw new Error(`Failed to fetch ingredients: ${fetchError.message}`)
+  }
 
-    if (error) {
-      throw new Error(`Failed to import inventory: ${error.message}`)
+  const ingredientByName = new Map(
+    (existingRows ?? []).map((row) => [row.ingredient_name, row]),
+  )
+  const missingNames = uniqueNames.filter((name) => !ingredientByName.has(name))
+
+  if (missingNames.length) {
+    const timestamp = Date.now()
+    const { data: createdRows, error: insertError } = await client
+      .from('ingredient_management')
+      .insert(
+        missingNames.map((name, index) => ({
+          user_id: userId,
+          ingredient_name: name,
+          category:
+            selectedItems.find((item) => item.name === name)?.category ??
+            'その他',
+          barcode: `receipt-${timestamp}-${index}`,
+        })),
+      )
+      .select('ingredient_id, ingredient_name')
+
+    if (insertError) {
+      throw new Error(`Failed to create ingredients: ${insertError.message}`)
     }
 
-    imported.push({
-      inventoryId: data.inventory_id,
-      ingredientId: ingredient.ingredient_id,
-      name: ingredient.ingredient_name,
-    })
+    for (const row of createdRows ?? []) {
+      ingredientByName.set(row.ingredient_name, row)
+    }
   }
+
+  const inventoryRows = selectedItems.map((item) => {
+    const ingredient = ingredientByName.get(item.name)
+    return {
+      ingredient_id: ingredient.ingredient_id,
+      user_id: userId,
+      quantity: item.quantity,
+      gram: item.gram,
+      purchase_date: todayIsoDate(),
+      expiration_date: fallbackExpirationDate(item),
+      memo: item.memo ?? 'レシートOCR',
+    }
+  })
+
+  const { data: insertedInventory, error: inventoryError } = await client
+    .from('inventory')
+    .insert(inventoryRows)
+    .select('inventory_id, ingredient_id')
+
+  if (inventoryError) {
+    throw new Error(`Failed to import inventory: ${inventoryError.message}`)
+  }
+
+  const ingredientById = new Map(
+    Array.from(ingredientByName.values()).map((row) => [
+      row.ingredient_id,
+      row.ingredient_name,
+    ]),
+  )
+
+  const imported = (insertedInventory ?? []).map((row) => ({
+    inventoryId: row.inventory_id,
+    ingredientId: row.ingredient_id,
+    name: ingredientById.get(row.ingredient_id) ?? '名称未設定',
+  }))
 
   return {
     userId,
@@ -456,7 +468,7 @@ export async function importReceiptItemsDetail({
 }) {
   const userId = await resolveUserId(requestedUserId)
   const client = ensureSupabase()
-  
+
   const selectedItems = (Array.isArray(items) ? items : []).filter(
     (item) => item.selected !== false && item.name,
   )
@@ -465,67 +477,83 @@ export async function importReceiptItemsDetail({
     throw new Error('No receipt items selected')
   }
 
-  const imported = []
-
-  for (const item of selectedItems) {
+  const timestamp = Date.now()
+  const ingredientRows = selectedItems.map((item, index) => {
     let amountStr = '1個'
     const gramVal = item.gram ? Number(item.gram) : null
     const qtyVal = item.quantity ? Number(item.quantity) : null
-    
+
     if (gramVal && gramVal > 0) {
       amountStr = `${gramVal}g`
     } else if (qtyVal && qtyVal > 0) {
       amountStr = `${qtyVal}個`
     }
 
-    const { data: ingredient, error: ingredientError } = await client
-      .from('ingredient_management')
-      .insert({
-        user_id: userId,
-        ingredient_name: item.name,
-        category: item.category,
-        barcode: `receipt-${Date.now()}`,
-        amount: amountStr,
-        is_opened: false,
-        best_before_date: item.bestBeforeDate ? String(item.bestBeforeDate) : null,
-        expiration_date: item.expirationDate ? String(item.expirationDate) : null,
-      })
-      .select('ingredient_id, ingredient_name')
-      .single()
-
-    if (ingredientError) {
-      throw new Error(`Failed to create ingredient detail: ${ingredientError.message}`)
+    return {
+      user_id: userId,
+      ingredient_name: item.name,
+      category: item.category,
+      barcode: `receipt-${timestamp}-${index}`,
+      amount: amountStr,
+      is_opened: false,
+      best_before_date: item.bestBeforeDate
+        ? String(item.bestBeforeDate)
+        : null,
+      expiration_date: item.expirationDate
+        ? String(item.expirationDate)
+        : null,
     }
+  })
 
+  const { data: insertedIngredients, error: ingredientError } = await client
+    .from('ingredient_management')
+    .insert(ingredientRows)
+    .select('ingredient_id, ingredient_name')
+
+  if (ingredientError) {
+    throw new Error(
+      `Failed to create ingredient detail: ${ingredientError.message}`,
+    )
+  }
+
+  const inventoryRows = selectedItems.map((item, index) => {
+    const ingredient = insertedIngredients?.[index]
     let invExpirationDate = item.expirationDate || item.bestBeforeDate || null
     if (!invExpirationDate) {
       invExpirationDate = fallbackExpirationDate(item)
     }
 
-    const { data: inventoryData, error: inventoryError } = await client
-      .from('inventory')
-      .insert({
-        ingredient_id: ingredient.ingredient_id,
-        user_id: userId,
-        quantity: qtyVal,
-        gram: gramVal,
-        purchase_date: todayIsoDate(),
-        expiration_date: invExpirationDate,
-        memo: item.memo || 'レシートOCR詳細登録',
-      })
-      .select('inventory_id')
-      .single()
-
-    if (inventoryError) {
-      throw new Error(`Failed to import inventory detail: ${inventoryError.message}`)
+    return {
+      ingredient_id: ingredient.ingredient_id,
+      user_id: userId,
+      quantity: item.quantity ? Number(item.quantity) : null,
+      gram: item.gram ? Number(item.gram) : null,
+      purchase_date: todayIsoDate(),
+      expiration_date: invExpirationDate,
+      memo: item.memo || 'レシートOCR詳細登録',
     }
+  })
 
-    imported.push({
-      inventoryId: inventoryData.inventory_id,
-      ingredientId: ingredient.ingredient_id,
-      name: ingredient.ingredient_name,
-    })
+  const { data: insertedInventory, error: inventoryError } = await client
+    .from('inventory')
+    .insert(inventoryRows)
+    .select('inventory_id, ingredient_id')
+
+  if (inventoryError) {
+    throw new Error(
+      `Failed to import inventory detail: ${inventoryError.message}`,
+    )
   }
+
+  const ingredientNameById = new Map(
+    (insertedIngredients ?? []).map((row) => [row.ingredient_id, row.ingredient_name]),
+  )
+
+  const imported = (insertedInventory ?? []).map((row) => ({
+    inventoryId: row.inventory_id,
+    ingredientId: row.ingredient_id,
+    name: ingredientNameById.get(row.ingredient_id) ?? '名称未設定',
+  }))
 
   return {
     userId,

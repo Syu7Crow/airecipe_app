@@ -292,7 +292,6 @@ export async function getInventoryForUser(requestedUserId, language = 'ja') {
         ingredient_id,
         ingredient_name,
         category,
-        barcode,
         is_opened,
         best_before_date,
         expiration_date
@@ -881,22 +880,34 @@ function unitUsesGram(unit) {
   )
 }
 
-async function reduceInventoryAmount({ userId, ingredientId, amount, unit }) {
+async function reduceInventoryAmount({
+  userId,
+  ingredientId,
+  amount,
+  unit,
+  prefetchedRows,
+}) {
   const client = ensureSupabase()
   const column = unitUsesGram(unit) ? 'gram' : 'quantity'
   const totalToDeduct = Math.ceil(amount)
   const deductions = []
 
-  const { data: rows, error } = await client
-    .from('inventory')
-    .select('inventory_id, quantity, gram, expiration_date')
-    .eq('user_id', userId)
-    .eq('ingredient_id', ingredientId)
-    .order('expiration_date', { ascending: true, nullsFirst: false })
-
-  if (error) {
-    throw new Error(`Failed to fetch inventory for deduction: ${error.message}`)
-  }
+  const rows =
+    prefetchedRows ??
+    (await client
+      .from('inventory')
+      .select('inventory_id, quantity, gram, expiration_date')
+      .eq('user_id', userId)
+      .eq('ingredient_id', ingredientId)
+      .order('expiration_date', { ascending: true, nullsFirst: false })
+      .then(({ data, error }) => {
+        if (error) {
+          throw new Error(
+            `Failed to fetch inventory for deduction: ${error.message}`,
+          )
+        }
+        return data
+      }))
 
   const available = (rows ?? []).reduce(
     (total, row) => total + Math.max(0, Number(row[column] ?? 0)),
@@ -997,6 +1008,30 @@ export async function markRecipeCooked({
     throw new Error(`Failed to fetch recipe ingredients: ${error.message}`)
   }
 
+  const ingredientIds = (recipeIngredients ?? [])
+    .map((ingredient) => ingredient.ingredient_id)
+    .filter(Boolean)
+
+  const { data: allInventoryRows, error: inventoryFetchError } = await client
+    .from('inventory')
+    .select('inventory_id, ingredient_id, quantity, gram, expiration_date')
+    .eq('user_id', userId)
+    .in('ingredient_id', ingredientIds)
+    .order('expiration_date', { ascending: true, nullsFirst: false })
+
+  if (inventoryFetchError) {
+    throw new Error(
+      `Failed to fetch inventory for deduction: ${inventoryFetchError.message}`,
+    )
+  }
+
+  const inventoryRowsByIngredient = new Map()
+  for (const row of allInventoryRows ?? []) {
+    const list = inventoryRowsByIngredient.get(row.ingredient_id) ?? []
+    list.push(row)
+    inventoryRowsByIngredient.set(row.ingredient_id, list)
+  }
+
   const results = []
 
   for (const ingredient of recipeIngredients ?? []) {
@@ -1012,6 +1047,7 @@ export async function markRecipeCooked({
         ingredientId: ingredient.ingredient_id,
         amount,
         unit: ingredient.unit ?? '',
+        prefetchedRows: inventoryRowsByIngredient.get(ingredient.ingredient_id),
       }),
     )
   }

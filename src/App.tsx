@@ -7,10 +7,13 @@ import {
   useState,
   type MutableRefObject,
 } from 'react'
-import './lib/supabase'
-import './lib/groq'
-import './lib/gemini'
 import './App.css'
+
+if (import.meta.env.DEV) {
+  void import('./lib/supabase')
+  void import('./lib/groq')
+  void import('./lib/gemini')
+}
 import { PageShell } from './components/PageShell'
 import { preloadAllPageData } from './lib/preload'
 import {
@@ -457,7 +460,7 @@ function App() {
 
   let pageNode: React.ReactNode
   const shell = (children: React.ReactNode) => (
-    <PageShell key={currentPage} currentPage={currentPage} onNavigate={handleNavigate} onLogout={handleLogout}>
+    <PageShell currentPage={currentPage} onNavigate={handleNavigate} onLogout={handleLogout}>
       {children}
     </PageShell>
   )

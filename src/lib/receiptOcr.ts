@@ -1,9 +1,9 @@
-import Tesseract from 'tesseract.js'
-
 export async function recognizeReceiptImage(
   file: File,
   onProgress?: (progress: number, status: string) => void,
 ) {
+  const { default: Tesseract } = await import('tesseract.js')
+
   const result = await Tesseract.recognize(file, 'jpn+eng', {
     logger: (message) => {
       if (typeof message.progress === 'number') {

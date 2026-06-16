@@ -1,3 +1,4 @@
+import { memo } from 'react'
 import { Icon } from './Icon'
 import { useI18n } from '../lib/useI18n'
 
@@ -9,7 +10,7 @@ type HeroPanelProps = {
   onShowRecipes?: () => void
 }
 
-export function HeroPanel({
+export const HeroPanel = memo(function HeroPanel({
   isGenerating,
   onGenerateRecipe,
   onAddIngredient,
@@ -82,4 +83,4 @@ export function HeroPanel({
       </div>
     </section>
   )
-}
+})

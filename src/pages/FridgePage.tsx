@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type FormEvent } from 'react'
+import { useDeferredValue, useEffect, useMemo, useState, type FormEvent } from 'react'
 import { Icon } from '../components/Icon'
 import { useI18n } from '../lib/useI18n'
 import { getCache, setCache } from '../lib/dataCache'
@@ -58,6 +58,7 @@ type AggregatedIngredient = {
   nearestBestBeforeDate: string | null
   isGrouped: boolean
   memo: string
+  searchText: string
   items: Ingredient[]
 }
 
@@ -194,10 +195,23 @@ function aggregateIngredients(
     .map(([key, items]) => {
       const category =
         items.find((item) => item.category)?.category ?? 'その他'
+      const name = items[0]?.name ?? '名称未設定'
+      const searchText = [
+        name,
+        category,
+        items[0]?.memo ?? '',
+        ...items.flatMap((ingredient) => [
+          ingredient.name,
+          ingredient.category ?? '',
+          ingredient.memo ?? '',
+        ]),
+      ]
+        .join(' ')
+        .toLocaleLowerCase()
 
       return {
         key,
-        name: items[0]?.name ?? '名称未設定',
+        name,
         category,
         quantity: items.reduce((total, item) => total + (item.quantity ?? 0), 0),
         gram: items.reduce((total, item) => total + (item.gram ?? 0), 0),
@@ -209,6 +223,7 @@ function aggregateIngredients(
         ),
         isGrouped: items.length > 1,
         memo: items[0]?.memo || '-',
+        searchText,
         items,
       } satisfies AggregatedIngredient
     })
@@ -276,6 +291,7 @@ export function FridgePage({
   const [sortMode, setSortMode] = useState<FridgeSortMode>('nameAsc')
   const [expirationFilter, setExpirationFilter] =
     useState<FridgeExpirationFilter>('all')
+  const deferredSearchQuery = useDeferredValue(searchQuery)
   const [formState, setFormState] = useState<IngredientFormState>(emptyForm)
   const [isFormOpen, setIsFormOpen] = useState(false)
   const [detailIngredient, setDetailIngredient] =
@@ -296,14 +312,17 @@ export function FridgePage({
     () =>
       sortCategoryNames(
         Array.from(
-          new Set(aggregatedIngredients.map((item) => item.category || 'その他')),
+          new Set(
+            ingredients
+              .map((item) => item.category?.trim() || 'その他'),
+          ),
         ),
         language,
       ),
-    [aggregatedIngredients, language],
+    [ingredients, language],
   )
   const filteredAggregatedIngredients = useMemo(() => {
-    const normalizedSearch = searchQuery.trim().toLocaleLowerCase()
+    const normalizedSearch = deferredSearchQuery.trim().toLocaleLowerCase()
     const isCategoryAll = selectedCategories.size === 0
 
     return aggregatedIngredients
@@ -312,44 +331,29 @@ export function FridgePage({
           return false
         }
 
-        if (normalizedSearch) {
-          const searchTarget = [
-            item.name,
-            item.category,
-            item.memo,
-            ...item.items.flatMap((ingredient) => [
-              ingredient.name,
-              ingredient.category ?? '',
-              ingredient.memo ?? '',
-            ]),
-          ]
-            .join(' ')
-            .toLocaleLowerCase()
-
-          if (!searchTarget.includes(normalizedSearch)) {
-            return false
-          }
+        if (normalizedSearch && !item.searchText.includes(normalizedSearch)) {
+          return false
         }
 
-        if (expirationFilter === 'near') {
-          return (
-            isNearExpiration(item.nearestExpirationDate) ||
-            isNearExpiration(item.nearestBestBeforeDate)
-          )
-        }
+      if (expirationFilter === 'near') {
+        return (
+          isNearExpiration(item.nearestExpirationDate) ||
+          isNearExpiration(item.nearestBestBeforeDate)
+        )
+      }
 
-        if (expirationFilter === 'expired') {
-          return item.items.some((ingredient) =>
-            isExpired(ingredient.expirationDate),
-          )
-        }
+      if (expirationFilter === 'expired') {
+        return item.items.some((ingredient) =>
+          isExpired(ingredient.expirationDate),
+        )
+      }
 
-        if (expirationFilter === 'noDate') {
-          return item.items.every(
-            (ingredient) =>
-              !ingredient.expirationDate && !ingredient.bestBeforeDate,
-          )
-        }
+      if (expirationFilter === 'noDate') {
+        return item.items.every(
+          (ingredient) =>
+            !ingredient.expirationDate && !ingredient.bestBeforeDate,
+        )
+      }
 
         return true
       })
@@ -386,7 +390,7 @@ export function FridgePage({
     aggregatedIngredients,
     expirationFilter,
     language,
-    searchQuery,
+    deferredSearchQuery,
     selectedCategories,
     sortMode,
   ])
@@ -564,7 +568,7 @@ export function FridgePage({
     return () => {
       isMounted = false
     }
-  }, [language, t])
+  }, [language])
 
   function openEditForm(ingredient: Ingredient) {
     setFormState(buildFormFromIngredient(ingredient))

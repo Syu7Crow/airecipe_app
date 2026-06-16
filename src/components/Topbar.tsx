@@ -69,6 +69,29 @@ function getDaysRemaining(dateStr: string | null | undefined) {
   return Math.ceil(diffTime / (1000 * 60 * 60 * 24))
 }
 
+function getDaysText(days: number, t: ReturnType<typeof useI18n>['t']) {
+  if (days < 0) {
+    return t('notification.yesterdayOrBefore')
+  }
+  if (days === 0) {
+    return t('notification.today')
+  }
+  if (days === 1) {
+    return t('notification.tomorrow')
+  }
+  return t('notification.daysRemaining', { days })
+}
+
+function getDaysClass(days: number) {
+  if (days <= 0) {
+    return 'urgent'
+  }
+  if (days === 1) {
+    return 'warning'
+  }
+  return 'info'
+}
+
 function getExpiringInfo(ingredient: Ingredient, leadDays: number) {
   const expDays = getDaysRemaining(ingredient.expirationDate)
   const bbDays = getDaysRemaining(ingredient.bestBeforeDate)
@@ -118,23 +141,26 @@ export function Topbar({ currentPage, onNavigate, onLogout }: TopbarProps) {
   )
   const notificationRef = useRef<HTMLDivElement | null>(null)
 
-  const loadData = useCallback(() => {
-    fetchInventory(language)
-      .then((result) => {
-        setIngredients(result.inventory)
-      })
-      .catch((err) => {
-        console.warn('[Topbar] Failed to fetch inventory:', err)
-      })
+  const loadInventoryAndPreferences = useCallback(() => {
+    void Promise.all([
+      fetchInventory(language)
+        .then((result) => {
+          setIngredients(result.inventory)
+        })
+        .catch((err) => {
+          console.warn('[Topbar] Failed to fetch inventory:', err)
+        }),
+      fetchPreferences()
+        .then((result) => {
+          setPreferences(result.preferences)
+        })
+        .catch((err) => {
+          console.warn('[Topbar] Failed to fetch preferences:', err)
+        }),
+    ])
+  }, [language])
 
-    fetchPreferences()
-      .then((result) => {
-        setPreferences(result.preferences)
-      })
-      .catch((err) => {
-        console.warn('[Topbar] Failed to fetch preferences:', err)
-      })
-
+  const loadMessages = useCallback(() => {
     fetchUserMessages()
       .then((result) => {
         setUserMessages(result.messages)
@@ -142,16 +168,21 @@ export function Topbar({ currentPage, onNavigate, onLogout }: TopbarProps) {
       .catch((err) => {
         console.warn('[Topbar] Failed to fetch messages:', err)
       })
-  }, [language])
+  }, [])
+
+  const loadAll = useCallback(() => {
+    loadInventoryAndPreferences()
+    loadMessages()
+  }, [loadInventoryAndPreferences, loadMessages])
 
   useEffect(() => {
-    loadData()
+    loadAll()
 
     const handleInventoryUpdated = () => {
-      loadData()
+      loadInventoryAndPreferences()
     }
     const handleMessagesUpdated = () => {
-      loadData()
+      loadMessages()
     }
     const handlePreferencesUpdated = (event: Event) => {
       const nextPreferences = (
@@ -172,7 +203,7 @@ export function Topbar({ currentPage, onNavigate, onLogout }: TopbarProps) {
       window.removeEventListener('messages-updated', handleMessagesUpdated)
       window.removeEventListener('preferences-updated', handlePreferencesUpdated)
     }
-  }, [loadData])
+  }, [loadAll, loadInventoryAndPreferences, loadMessages])
 
   useEffect(() => {
     if (!isOpen) {
@@ -267,29 +298,6 @@ export function Topbar({ currentPage, onNavigate, onLogout }: TopbarProps) {
 
       return nextIsOpen
     })
-  }
-
-  const getDaysText = (days: number) => {
-    if (days < 0) {
-      return t('notification.yesterdayOrBefore')
-    }
-    if (days === 0) {
-      return t('notification.today')
-    }
-    if (days === 1) {
-      return t('notification.tomorrow')
-    }
-    return t('notification.daysRemaining', { days })
-  }
-
-  const getDaysClass = (days: number) => {
-    if (days <= 0) {
-      return 'urgent'
-    }
-    if (days === 1) {
-      return 'warning'
-    }
-    return 'info'
   }
 
   return (
@@ -432,7 +440,7 @@ export function Topbar({ currentPage, onNavigate, onLogout }: TopbarProps) {
                             {t('notification.expiring', { name: item.name })}
                           </p>
                           <span className={`notification-item__days ${getDaysClass(days)}`}>
-                            {getDaysText(days)} ({date})
+                            {getDaysText(days, t)} ({date})
                           </span>
                         </div>
                       </button>

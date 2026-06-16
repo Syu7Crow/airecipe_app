@@ -1083,13 +1083,14 @@ async function handleRecipeGeneration(request, response, userId) {
 
   try {
     body = await readJsonBody(request)
+    const { preferences } = await getUserPreferences(userId)
     const result = await generateAndSaveRecipes({
       userId,
       servings: body?.servings,
       language: body?.language,
       avoidedIngredients: body?.avoidedIngredients,
       cookingRequest: body?.cookingRequest,
-      modelChoice: body?.model,
+      modelChoice: preferences.recipeModel,
       seasoningMode: body?.seasoningMode,
     })
 

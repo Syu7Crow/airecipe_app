@@ -211,7 +211,7 @@ export function HomePage({
     return () => {
       isMounted = false
     }
-  }, [language, t])
+  }, [language])
 
   useEffect(() => {
     let isMounted = true
@@ -260,7 +260,6 @@ export function HomePage({
         language,
         preferences.avoidedIngredients,
         undefined,
-        preferences.recipeModel,
         preferences.seasoningMode,
       )
 
