@@ -21,15 +21,11 @@ export function HeroPanel({
   return (
     <section className="hero-panel" aria-labelledby="home-title">
       <div className="hero-panel__content">
-        <p className="eyebrow">{t('home.hero.eyebrow')}</p>
         <h1 id="home-title">
           {t('home.hero.titleLine1')}
           <br />
           {t('home.hero.titleLine2')}
         </h1>
-        <p className="hero-panel__lead">
-          {t('home.hero.lead')}
-        </p>
         <div className="hero-actions">
           <button
             type="button"

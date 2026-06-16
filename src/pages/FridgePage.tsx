@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
+import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { Icon } from '../components/Icon'
 import { useI18n } from '../lib/useI18n'
 import { getCache, setCache } from '../lib/dataCache'
@@ -177,41 +177,6 @@ function sortCategoryNames(categories: string[], language: string) {
   )
 }
 
-function compareAggregatedIngredients(
-  left: AggregatedIngredient,
-  right: AggregatedIngredient,
-  sortMode: FridgeSortMode,
-  language: string,
-) {
-  switch (sortMode) {
-    case 'expirationAsc':
-      return (
-        getDateTime(left.nearestExpirationDate) -
-          getDateTime(right.nearestExpirationDate) ||
-        left.name.localeCompare(right.name, language)
-      )
-    case 'bestBeforeAsc':
-      return (
-        getDateTime(left.nearestBestBeforeDate) -
-          getDateTime(right.nearestBestBeforeDate) ||
-        left.name.localeCompare(right.name, language)
-      )
-    case 'quantityDesc':
-      return (
-        right.quantity - left.quantity ||
-        left.name.localeCompare(right.name, language)
-      )
-    case 'gramDesc':
-      return (
-        right.gram - left.gram ||
-        left.name.localeCompare(right.name, language)
-      )
-    case 'nameAsc':
-    default:
-      return left.name.localeCompare(right.name, language)
-  }
-}
-
 function aggregateIngredients(
   ingredients: Ingredient[],
   language: string,
@@ -301,11 +266,9 @@ export function FridgePage({
   const [ingredients, setIngredients] = useState<Ingredient[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [toastMessage, setToastMessage] = useState('')
-  const toastTimerRef = useRef<number | null>(null)
+  const [statusMessage, setStatusMessage] = useState('')
   const [isFilterOpen, setIsFilterOpen] = useState(false)
   const [isCategoryDropdownOpen, setIsCategoryDropdownOpen] = useState(false)
-  const categoryDropdownRef = useRef<HTMLDivElement | null>(null)
   const [selectedCategories, setSelectedCategories] = useState<Set<string>>(
     () => new Set(),
   )
@@ -343,12 +306,13 @@ export function FridgePage({
     const normalizedSearch = searchQuery.trim().toLocaleLowerCase()
     const isCategoryAll = selectedCategories.size === 0
 
-    return aggregatedIngredients.filter((item) => {
-      if (!isCategoryAll && !selectedCategories.has(item.category)) {
-        return false
-      }
+    return aggregatedIngredients
+      .filter((item) => {
+        if (!isCategoryAll && !selectedCategories.has(item.category)) {
+          return false
+        }
 
-      if (normalizedSearch) {
+        if (normalizedSearch) {
           const searchTarget = [
             item.name,
             item.category,
@@ -387,13 +351,44 @@ export function FridgePage({
           )
         }
 
-      return true
-    })
+        return true
+      })
+      .toSorted((left, right) => {
+        switch (sortMode) {
+          case 'expirationAsc':
+            return (
+              getDateTime(left.nearestExpirationDate) -
+                getDateTime(right.nearestExpirationDate) ||
+              left.name.localeCompare(right.name, language)
+            )
+          case 'bestBeforeAsc':
+            return (
+              getDateTime(left.nearestBestBeforeDate) -
+                getDateTime(right.nearestBestBeforeDate) ||
+              left.name.localeCompare(right.name, language)
+            )
+          case 'quantityDesc':
+            return (
+              right.quantity - left.quantity ||
+              left.name.localeCompare(right.name, language)
+            )
+          case 'gramDesc':
+            return (
+              right.gram - left.gram ||
+              left.name.localeCompare(right.name, language)
+            )
+          case 'nameAsc':
+          default:
+            return left.name.localeCompare(right.name, language)
+        }
+      })
   }, [
     aggregatedIngredients,
     expirationFilter,
+    language,
     searchQuery,
     selectedCategories,
+    sortMode,
   ])
   const groupedIngredients = useMemo(
     () =>
@@ -411,15 +406,9 @@ export function FridgePage({
   const sortedCategoryEntries = useMemo(
     () =>
       sortCategoryNames(Object.keys(groupedIngredients), language).map(
-        (category) =>
-          [
-            category,
-            groupedIngredients[category].toSorted((left, right) =>
-              compareAggregatedIngredients(left, right, sortMode, language),
-            ),
-          ] as const,
+        (category) => [category, groupedIngredients[category]] as const,
       ),
-    [groupedIngredients, language, sortMode],
+    [groupedIngredients, language],
   )
   const formCategories = useMemo(
     () =>
@@ -455,26 +444,6 @@ export function FridgePage({
     sortMode !== 'nameAsc' ||
     expirationFilter !== 'all'
 
-  function clearToast() {
-    if (toastTimerRef.current !== null) {
-      window.clearTimeout(toastTimerRef.current)
-      toastTimerRef.current = null
-    }
-    setToastMessage('')
-  }
-
-  function showToast(message: string) {
-    if (toastTimerRef.current !== null) {
-      window.clearTimeout(toastTimerRef.current)
-    }
-
-    setToastMessage(message)
-    toastTimerRef.current = window.setTimeout(() => {
-      setToastMessage('')
-      toastTimerRef.current = null
-    }, 2600)
-  }
-
   function getCategoryLabel(category: string) {
     switch (category) {
       case '肉・卵・魚':
@@ -489,6 +458,23 @@ export function FridgePage({
         return t('category.other')
       default:
         return category
+    }
+  }
+
+  function getCategoryTitleClass(category: string) {
+    switch (category) {
+      case '肉・卵・魚':
+        return 'category-title--meat'
+      case '野菜':
+        return 'category-title--veg'
+      case '乳製品':
+        return 'category-title--dairy'
+      case '加工品':
+        return 'category-title--processed'
+      case 'その他':
+        return 'category-title--other'
+      default:
+        return 'category-title--other'
     }
   }
 
@@ -521,17 +507,14 @@ export function FridgePage({
     setExpirationFilter('all')
   }
 
-  function scrollToMarkedRow(
-    selector: string,
-    highlightClassName: 'flash-highlight-warning' | 'flash-highlight-danger',
-  ) {
+  function scrollToMarkedRow(selector: string) {
     setTimeout(() => {
       const targetRow = document.querySelector(selector)
       if (targetRow) {
         targetRow.scrollIntoView({ behavior: 'smooth', block: 'center' })
-        targetRow.classList.add(highlightClassName)
+        targetRow.classList.add('flash-highlight')
         setTimeout(() => {
-          targetRow.classList.remove(highlightClassName)
+          targetRow.classList.remove('flash-highlight')
         }, 2000)
       }
     }, 120)
@@ -539,12 +522,12 @@ export function FridgePage({
 
   function handleScrollToNearExpiration() {
     resetFiltersForScroll()
-    scrollToMarkedRow('[data-near-expiration="true"]', 'flash-highlight-warning')
+    scrollToMarkedRow('[data-near-expiration="true"]')
   }
 
   function handleScrollToExpired() {
     resetFiltersForScroll()
-    scrollToMarkedRow('[data-expired="true"]', 'flash-highlight-danger')
+    scrollToMarkedRow('[data-expired="true"]')
   }
 
   useEffect(() => {
@@ -582,47 +565,6 @@ export function FridgePage({
       isMounted = false
     }
   }, [language, t])
-
-  useEffect(() => {
-    return () => {
-      if (toastTimerRef.current !== null) {
-        window.clearTimeout(toastTimerRef.current)
-      }
-    }
-  }, [])
-
-  useEffect(() => {
-    if (!isCategoryDropdownOpen) {
-      return
-    }
-
-    const handlePointerDown = (event: PointerEvent) => {
-      const target = event.target
-
-      if (
-        target instanceof Node &&
-        categoryDropdownRef.current?.contains(target)
-      ) {
-        return
-      }
-
-      setIsCategoryDropdownOpen(false)
-    }
-
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        setIsCategoryDropdownOpen(false)
-      }
-    }
-
-    document.addEventListener('pointerdown', handlePointerDown, true)
-    document.addEventListener('keydown', handleKeyDown)
-
-    return () => {
-      document.removeEventListener('pointerdown', handlePointerDown, true)
-      document.removeEventListener('keydown', handleKeyDown)
-    }
-  }, [isCategoryDropdownOpen])
 
   function openEditForm(ingredient: Ingredient) {
     setFormState(buildFormFromIngredient(ingredient))
@@ -662,7 +604,7 @@ export function FridgePage({
 
     setIsSaving(true)
     setFormError('')
-    clearToast()
+    setStatusMessage('')
 
     try {
       const result = input.inventoryId
@@ -677,7 +619,7 @@ export function FridgePage({
             ) ?? null
           : null,
       )
-      showToast(
+      setStatusMessage(
         input.inventoryId ? t('fridge.status.updated') : t('fridge.status.added'),
       )
       setIsFormOpen(false)
@@ -732,12 +674,12 @@ export function FridgePage({
     const uniqueIds = Array.from(new Set(ids))
 
     if (!uniqueIds.length) {
-      showToast(t('fridge.selection.deleteNone'))
+      setStatusMessage(t('fridge.selection.deleteNone'))
       return
     }
 
     setIsSaving(true)
-    clearToast()
+    setStatusMessage('')
     setError(null)
 
     try {
@@ -759,7 +701,7 @@ export function FridgePage({
       )
       setSelectedInventoryIds(new Set())
       setIsSelectionMode(false)
-      showToast(
+      setStatusMessage(
         t('fridge.selection.deletedCount', { count: uniqueIds.length }),
       )
       setIsSaving(false)
@@ -786,7 +728,7 @@ export function FridgePage({
 
   function handleDeleteExpired() {
     if (!expiredInventoryIds.length) {
-      showToast(t('fridge.selection.deleteNone'))
+      setStatusMessage(t('fridge.selection.deleteNone'))
       return
     }
 
@@ -869,6 +811,12 @@ export function FridgePage({
           </div>
         </div>
 
+        {statusMessage ? (
+          <p className="status-message" role="status">
+            {statusMessage}
+          </p>
+        ) : null}
+
         {loading ? (
           <div className="fridge-loading">
             <div className="loading-spinner" />
@@ -893,8 +841,8 @@ export function FridgePage({
                 role={summary.nearExpirationCount > 0 ? 'button' : undefined}
                 tabIndex={summary.nearExpirationCount > 0 ? 0 : undefined}
                 style={{
-                  border: summary.nearExpirationCount > 0 ? '1px solid rgba(var(--warning-rgb), 0.4)' : undefined,
-                  background: summary.nearExpirationCount > 0 ? 'rgba(var(--warning-rgb), 0.05)' : undefined,
+                  border: summary.nearExpirationCount > 0 ? '1px solid rgba(245, 158, 11, 0.45)' : undefined,
+                  background: summary.nearExpirationCount > 0 ? 'rgba(245, 158, 11, 0.04)' : undefined,
                 }}
               >
                 <span className="card-label" style={{ color: summary.nearExpirationCount > 0 ? 'var(--warning)' : undefined }}>
@@ -913,8 +861,8 @@ export function FridgePage({
                 role={summary.expiredCount > 0 ? 'button' : undefined}
                 tabIndex={summary.expiredCount > 0 ? 0 : undefined}
                 style={{
-                  border: summary.expiredCount > 0 ? '1px solid rgba(var(--danger-rgb), 0.36)' : undefined,
-                  background: summary.expiredCount > 0 ? 'rgba(var(--danger-rgb), 0.05)' : undefined,
+                  border: summary.expiredCount > 0 ? '1px solid rgba(220, 38, 38, 0.45)' : undefined,
+                  background: summary.expiredCount > 0 ? 'rgba(220, 38, 38, 0.04)' : undefined,
                 }}
               >
                 <span className="card-label" style={{ color: summary.expiredCount > 0 ? 'var(--danger)' : undefined }}>
@@ -952,7 +900,7 @@ export function FridgePage({
             <div className="fridge-filter-options">
               <fieldset className="fridge-filter-group">
                 <legend>{t('fridge.filter.category')}</legend>
-                <div className="fridge-category-dropdown" ref={categoryDropdownRef}>
+                <div className="fridge-category-dropdown">
                   <button
                     type="button"
                     className="secondary-button fridge-category-dropdown__trigger"
@@ -1041,16 +989,14 @@ export function FridgePage({
         </section>
 
         <div className="fridge-bulk-actions">
-          {expiredInventoryIds.length > 0 ? (
-            <button
-              type="button"
-              className="secondary-button danger-button"
-              onClick={handleDeleteExpired}
-              disabled={isSaving}
-            >
-              {t('fridge.selection.deleteExpired')}
-            </button>
-          ) : null}
+          <button
+            type="button"
+            className="secondary-button danger-button"
+            onClick={handleDeleteExpired}
+            disabled={isSaving || expiredInventoryIds.length === 0}
+          >
+            {t('fridge.selection.deleteExpired')}
+          </button>
 
           {isSelectionMode ? (
             <>
@@ -1109,7 +1055,14 @@ export function FridgePage({
             sortedCategoryEntries
               .map(([category, items]) => (
                 <div key={category} className="category-table-wrapper">
-                  <h2 className="category-title">{getCategoryLabel(category)}</h2>
+                  <h2
+                    className={`category-title ${getCategoryTitleClass(category)}`}
+                  >
+                    <span className="category-title__label">
+                      {getCategoryLabel(category)}
+                    </span>
+                    <span className="category-title__count">{items.length}</span>
+                  </h2>
                   <div className="table-container">
                     <table className={`fridge-table ${isSelectionMode ? 'is-selecting' : ''}`}>
                       <thead>
@@ -1173,31 +1126,13 @@ export function FridgePage({
                                 </td>
                               ) : null}
                               <td className="ingredient-name-cell">
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                                  <button
-                                    type="button"
-                                    className={`ingredient-name-link ${
-                                      item.isGrouped
-                                        ? 'ingredient-name-link--grouped'
-                                        : ''
-                                    }`}
-                                    onClick={() => setDetailIngredient(item)}
-                                  >
-                                    {item.name}
-                                  </button>
-                                  {isExpiredItem && (
-                                    <span className="expiry-alert expired-badge">
-                                      <Icon name="bell" />
-                                      {t('fridge.summary.expired')}
-                                    </span>
-                                  )}
-                                  {isWarning && (
-                                    <span className="expiry-alert">
-                                      <Icon name="bell" />
-                                      {t('fridge.summary.nearExpiration')}
-                                    </span>
-                                  )}
-                                </div>
+                                <button
+                                  type="button"
+                                  className="ingredient-name-link"
+                                  onClick={() => setDetailIngredient(item)}
+                                >
+                                  {item.name}
+                                </button>
                               </td>
                               <td>
                                 <span className="amount-text">
@@ -1260,12 +1195,6 @@ export function FridgePage({
           </div>
         )}
       </main>
-
-      {toastMessage ? (
-        <div className="toast-message" role="status">
-          {toastMessage}
-        </div>
-      ) : null}
 
       {detailIngredient ? (
         <div
