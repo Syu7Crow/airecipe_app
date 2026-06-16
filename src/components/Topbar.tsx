@@ -104,12 +104,14 @@ function getExpiringInfo(ingredient: Ingredient, leadDays: number) {
 export function Topbar({ onNavigate, onLogout }: TopbarProps) {
   const { language, t } = useI18n()
   const [isOpen, setIsOpen] = useState(false)
+  const [isMenuOpen, setIsMenuOpen] = useState(false) // 💡 スマホ用ハンバーガーメニュー開閉状態
   const [ingredients, setIngredients] = useState<Ingredient[]>([])
   const [preferences, setPreferences] = useState<UserPreferences>(defaultPreferences)
   const [viewedNotificationKeys, setViewedNotificationKeys] = useState(
     readViewedNotifications,
   )
   const notificationRef = useRef<HTMLDivElement | null>(null)
+  const menuRef = useRef<HTMLDivElement | null>(null) // 💡 外側クリック検知用
 
   const loadData = useCallback(() => {
     fetchInventory(language)
@@ -141,27 +143,31 @@ export function Topbar({ onNavigate, onLogout }: TopbarProps) {
     }
   }, [loadData])
 
+  // ドロップダウン・メニューの外側クリックおよびEscapeキーによるクローズ制御
   useEffect(() => {
-    if (!isOpen) {
+    if (!isOpen && !isMenuOpen) {
       return
     }
 
     const handlePointerDown = (event: PointerEvent) => {
       const target = event.target
+      if (!(target instanceof Node)) return
 
-      if (
-        target instanceof Node &&
-        notificationRef.current?.contains(target)
-      ) {
-        return
+      // 通知ドロップダウンの外側クリック判定
+      if (isOpen && !notificationRef.current?.contains(target)) {
+        setIsOpen(false)
       }
 
-      setIsOpen(false)
+      // ハンバーガーメニュー自体の外側クリック判定
+      if (isMenuOpen && !menuRef.current?.contains(target)) {
+        setIsMenuOpen(false)
+      }
     }
 
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
         setIsOpen(false)
+        setIsMenuOpen(false)
       }
     }
 
@@ -172,7 +178,7 @@ export function Topbar({ onNavigate, onLogout }: TopbarProps) {
       document.removeEventListener('pointerdown', handlePointerDown, true)
       document.removeEventListener('keydown', handleKeyDown)
     }
-  }, [isOpen])
+  }, [isOpen, isMenuOpen])
 
   const expiringIngredients = useMemo(() => {
     const leadDays = preferences.notifications.expiration
@@ -212,11 +218,10 @@ export function Topbar({ onNavigate, onLogout }: TopbarProps) {
   function toggleNotifications() {
     setIsOpen((current) => {
       const nextIsOpen = !current
-
       if (nextIsOpen) {
         markNotificationsViewed(expiringIngredients)
+        setIsMenuOpen(false) // 通知を開く時はメニューを閉じる
       }
-
       return nextIsOpen
     })
   }
@@ -252,6 +257,7 @@ export function Topbar({ onNavigate, onLogout }: TopbarProps) {
         aria-label={t('app.name')}
         onClick={(event) => {
           event.preventDefault()
+          setIsMenuOpen(false)
           onNavigate?.('home')
         }}
       >
@@ -264,11 +270,13 @@ export function Topbar({ onNavigate, onLogout }: TopbarProps) {
         </span>
       </a>
 
-      <nav className="topbar__nav" aria-label={t('topbar.menuLabel')}>
+      {/* 💡 クラス名に状態を付与。スマホ時のみポップオーバーメニューに変形 */}
+      <nav className={`topbar__nav ${isMenuOpen ? 'is-open' : ''}`} aria-label={t('topbar.menuLabel')}>
         <a
           href="#ingredients"
           onClick={(event) => {
             event.preventDefault()
+            setIsMenuOpen(false)
             onNavigate?.('fridge')
           }}
         >
@@ -278,6 +286,7 @@ export function Topbar({ onNavigate, onLogout }: TopbarProps) {
           href="#recipes"
           onClick={(event) => {
             event.preventDefault()
+            setIsMenuOpen(false)
             onNavigate?.('home')
             setTimeout(() => {
               document
@@ -292,6 +301,7 @@ export function Topbar({ onNavigate, onLogout }: TopbarProps) {
           href="#receipt"
           onClick={(event) => {
             event.preventDefault()
+            setIsMenuOpen(false)
             onNavigate?.('receipt')
           }}
         >
@@ -301,6 +311,7 @@ export function Topbar({ onNavigate, onLogout }: TopbarProps) {
           href="#history"
           onClick={(event) => {
             event.preventDefault()
+            setIsMenuOpen(false)
             onNavigate?.('history')
           }}
         >
@@ -308,7 +319,23 @@ export function Topbar({ onNavigate, onLogout }: TopbarProps) {
         </a>
       </nav>
 
-      <div className="topbar__actions">
+      <div className="topbar__actions" ref={menuRef}>
+        {/* 💡 スマホ用ハンバーガーボタン（PC・タブレット時は非表示） */}
+        <button
+          type="button"
+          className={`hamburger-button ${isMenuOpen ? 'is-active' : ''}`}
+          aria-label="メニューを開閉"
+          aria-expanded={isMenuOpen}
+          onClick={() => {
+            setIsMenuOpen(!isMenuOpen)
+            setIsOpen(false) // メニューを開く時は通知を閉じる
+          }}
+        >
+          <span></span>
+          <span></span>
+          <span></span>
+        </button>
+
         <div
           ref={notificationRef}
           className="notification-trigger-container"
@@ -371,7 +398,10 @@ export function Topbar({ onNavigate, onLogout }: TopbarProps) {
         <button
           type="button"
           className="account-button"
-          onClick={() => onNavigate?.('settings')}
+          onClick={() => {
+            setIsMenuOpen(false)
+            onNavigate?.('settings')
+          }}
         >
           <Icon name="settings" />
           <span>{t('topbar.settings')}</span>
@@ -380,7 +410,10 @@ export function Topbar({ onNavigate, onLogout }: TopbarProps) {
           <button
             type="button"
             className="account-button"
-            onClick={() => void onLogout()}
+            onClick={() => {
+              setIsMenuOpen(false)
+              void onLogout()
+            }}
           >
             <Icon name="user" />
             <span>{t('common.logout')}</span>
