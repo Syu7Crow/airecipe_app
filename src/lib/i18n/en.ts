@@ -55,6 +55,8 @@ export const enMessages: Record<MessageKey, string> = {
   'home.hero.titleLine2': 'from your ingredients',
   'home.hero.lead':
     'Start ingredient registration, expiration tracking, and recipe generation from one screen.',
+  'home.hero.leadMobileLine1': 'Register ingredients, track expiration dates,',
+  'home.hero.leadMobileLine2': 'and generate recipes from one screen.',
   'home.hero.generating': 'Generating...',
   'home.hero.generate': 'Generate recipes',
   'home.hero.addIngredient': 'Check ingredients',

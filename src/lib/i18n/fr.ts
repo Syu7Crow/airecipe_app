@@ -56,6 +56,8 @@ export const frMessages: Record<MessageKey, string> = {
   'home.hero.titleLine2': 'à partir des ingrédients',
   'home.hero.lead':
     'Lancez l’ajout d’ingrédients, le suivi des dates et la génération de recettes depuis un seul écran.',
+  'home.hero.leadMobileLine1': 'Ajout d’ingrédients, suivi des dates',
+  'home.hero.leadMobileLine2': 'et génération de recettes sur un seul écran.',
   'home.hero.generating': 'Génération...',
   'home.hero.generate': 'Générer des recettes',
   'home.hero.addIngredient': 'Consulter les ingrédients',

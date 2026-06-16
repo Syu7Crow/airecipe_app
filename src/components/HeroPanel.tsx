@@ -29,7 +29,13 @@ export const HeroPanel = memo(function HeroPanel({
           {t('home.hero.titleLine2')}
         </h1>
         <p className="hero-panel__lead">
-          {t('home.hero.lead')}
+          <span className="hero-panel__lead-desktop">
+            {t('home.hero.lead')}
+          </span>
+          <span className="hero-panel__lead-mobile">
+            <span>{t('home.hero.leadMobileLine1')}</span>
+            <span>{t('home.hero.leadMobileLine2')}</span>
+          </span>
         </p>
         <div className="hero-actions">
           <button
