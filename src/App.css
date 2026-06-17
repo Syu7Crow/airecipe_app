@@ -1992,6 +1992,13 @@ button:disabled {
   gap: var(--space-5);
 }
 
+.settings-compact-grid {
+  display: grid;
+  grid-template-columns: minmax(150px, 0.7fr) minmax(220px, 1fr);
+  gap: var(--space-3);
+  align-items: stretch;
+}
+
 .settings-field {
   display: grid;
   gap: 8px;
@@ -2049,6 +2056,10 @@ button:disabled {
   min-height: 104px;
   padding: 12px;
   resize: vertical;
+}
+
+.settings-field--compact textarea {
+  min-height: 44px;
 }
 
 .settings-fieldset {
@@ -2541,6 +2552,10 @@ button:disabled {
 
   .settings-field--inline input {
     width: min(100%, 160px);
+  }
+
+  .settings-compact-grid {
+    grid-template-columns: 1fr;
   }
 
   .receipt-source-actions {

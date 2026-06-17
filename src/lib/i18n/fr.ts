@@ -390,7 +390,7 @@ export const frMessages: Record<MessageKey, string> = {
   'ingredientRegister.imageIcon': 'Img',
   'ingredientRegister.imageSub': 'Lire les candidats avec l’IA',
   'ingredientRegister.imageSourceEyebrow': 'Reconnaissance d’image',
-  'ingredientRegister.imageSourceTitle': 'Reconnaissance d’image',
+  'ingredientRegister.imageSourceTitle': 'Lire depuis une image',
   'ingredientRegister.foodBadge': 'Aliment',
   'ingredientRegister.shootFood': 'Photographier l’aliment',
   'ingredientRegister.foodEstimate': 'L’IA estime les noms et catégories',

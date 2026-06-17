@@ -381,7 +381,7 @@ export const enMessages: Record<MessageKey, string> = {
   'ingredientRegister.imageIcon': 'Img',
   'ingredientRegister.imageSub': 'Read candidates with AI',
   'ingredientRegister.imageSourceEyebrow': 'Image recognition',
-  'ingredientRegister.imageSourceTitle': 'Image recognition',
+  'ingredientRegister.imageSourceTitle': 'Read from image',
   'ingredientRegister.foodBadge': 'Food',
   'ingredientRegister.shootFood': 'Take a food photo',
   'ingredientRegister.foodEstimate': 'AI estimates names and categories',

@@ -75,6 +75,8 @@ export function sanitizeUserPreferences(value) {
       : {}
   const voice =
     source.voice && typeof source.voice === 'object' ? source.voice : {}
+  const voiceEnabled =
+    voice.enabled ?? source.voiceEnabled ?? source.speechEnabled
 
   return {
     defaultServings: sanitizeDefaultServings(source.defaultServings),
@@ -92,9 +94,35 @@ export function sanitizeUserPreferences(value) {
       expirationLeadDays: sanitizeLeadDays(notifications.expirationLeadDays),
     },
     voice: {
-      enabled: voice.enabled === true,
+      enabled: voiceEnabled === true,
     },
   }
+}
+
+function mergeUserPreferences(currentValue, nextValue) {
+  const current = sanitizeUserPreferences(currentValue)
+  const next = nextValue && typeof nextValue === 'object' ? nextValue : {}
+  const currentNotifications = current.notifications
+  const nextNotifications =
+    next.notifications && typeof next.notifications === 'object'
+      ? next.notifications
+      : {}
+  const currentVoice = current.voice
+  const nextVoice =
+    next.voice && typeof next.voice === 'object' ? next.voice : {}
+
+  return sanitizeUserPreferences({
+    ...current,
+    ...next,
+    notifications: {
+      ...currentNotifications,
+      ...nextNotifications,
+    },
+    voice: {
+      ...currentVoice,
+      ...nextVoice,
+    },
+  })
 }
 
 async function getAuthUser(userId) {
@@ -125,7 +153,10 @@ export async function getUserPreferences(userId) {
 export async function updateUserPreferences({ userId, preferences }) {
   const client = ensureSupabaseAdmin()
   const user = await getAuthUser(userId)
-  const nextPreferences = sanitizeUserPreferences(preferences)
+  const nextPreferences = mergeUserPreferences(
+    user.user_metadata?.[metadataKey],
+    preferences,
+  )
   const nextMetadata = {
     ...(user.user_metadata ?? {}),
     [metadataKey]: nextPreferences,
