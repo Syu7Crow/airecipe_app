@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Icon } from '../components/Icon'
 import { markRecipeCooked, setRecipeFavorite } from '../lib/recipeApi'
+import { useRecipeSpeech } from '../lib/useRecipeSpeech'
 import { useI18n } from '../lib/useI18n'
 import type { AppDestination, Ingredient, Recipe } from '../types/ui'
 
@@ -37,6 +38,14 @@ export function RecipeDetailPage({
             .map((step) => step.trim())
             .filter(Boolean)
         : []
+  const recipeSpeech = useRecipeSpeech({
+    recipeName: recipe.name,
+    recipeMeta: recipe.meta,
+    ingredients: recipe.ingredients ?? [],
+    steps,
+    language,
+    t,
+  })
 
   async function handleCooked() {
     if (!recipe.recipeId) {
@@ -129,6 +138,123 @@ export function RecipeDetailPage({
           </p>
         ) : null}
 
+        <section
+          className="panel recipe-voice-panel"
+          aria-labelledby="recipe-voice-title"
+        >
+          <div className="section-heading">
+            <div>
+              <p className="eyebrow">{t('recipe.voice.eyebrow')}</p>
+              <h2 id="recipe-voice-title">{t('recipe.voice.title')}</h2>
+            </div>
+            <span
+              className={`recipe-voice-status recipe-voice-status--${recipeSpeech.status}`}
+              role="status"
+            >
+              {recipeSpeech.statusLabel}
+            </span>
+          </div>
+
+          <div className="recipe-voice-controls">
+            <button
+              type="button"
+              className="primary-button"
+              onClick={
+                recipeSpeech.isPaused
+                  ? recipeSpeech.resume
+                  : recipeSpeech.startGuide
+              }
+              disabled={!recipeSpeech.isSpeechSupported}
+            >
+              <Icon name={recipeSpeech.isPaused ? 'play' : 'volume'} />
+              <span>
+                {recipeSpeech.isPaused
+                  ? t('recipe.voice.resume')
+                  : t('recipe.voice.start')}
+              </span>
+            </button>
+            <button
+              type="button"
+              className="secondary-button"
+              onClick={recipeSpeech.pause}
+              disabled={!recipeSpeech.isSpeechSupported || !recipeSpeech.isSpeaking}
+            >
+              <Icon name="pause" />
+              <span>{t('recipe.voice.pause')}</span>
+            </button>
+            <button
+              type="button"
+              className="secondary-button"
+              onClick={recipeSpeech.stop}
+              disabled={!recipeSpeech.isSpeechSupported}
+            >
+              <Icon name="stop" />
+              <span>{t('recipe.voice.stop')}</span>
+            </button>
+            <button
+              type="button"
+              className="secondary-button"
+              onClick={recipeSpeech.speakIngredients}
+              disabled={
+                !recipeSpeech.isSpeechSupported || !recipe.ingredients?.length
+              }
+            >
+              <Icon name="basket" />
+              <span>{t('recipe.voice.ingredients')}</span>
+            </button>
+            <button
+              type="button"
+              className="secondary-button"
+              onClick={recipeSpeech.previousStep}
+              disabled={!recipeSpeech.isSpeechSupported || steps.length === 0}
+            >
+              <Icon name="skipBack" />
+              <span>{t('recipe.voice.previous')}</span>
+            </button>
+            <button
+              type="button"
+              className="secondary-button"
+              onClick={recipeSpeech.nextStep}
+              disabled={!recipeSpeech.isSpeechSupported || steps.length === 0}
+            >
+              <Icon name="skipForward" />
+              <span>{t('recipe.voice.next')}</span>
+            </button>
+            <button
+              type="button"
+              className="secondary-button"
+              onClick={recipeSpeech.repeatCurrent}
+              disabled={!recipeSpeech.isSpeechSupported || steps.length === 0}
+            >
+              <Icon name="repeat" />
+              <span>{t('recipe.voice.repeat')}</span>
+            </button>
+            <button
+              type="button"
+              className={`secondary-button recipe-voice-listen ${
+                recipeSpeech.isListening ? 'is-active' : ''
+              }`}
+              onClick={recipeSpeech.listenForCommand}
+              disabled={!recipeSpeech.isRecognitionSupported}
+            >
+              <Icon name="mic" />
+              <span>
+                {recipeSpeech.isListening
+                  ? t('recipe.voice.listening')
+                  : t('recipe.voice.listen')}
+              </span>
+            </button>
+          </div>
+
+          {recipeSpeech.transcript ? (
+            <p className="recipe-voice-transcript">
+              {t('recipe.voice.transcript', {
+                command: recipeSpeech.transcript,
+              })}
+            </p>
+          ) : null}
+        </section>
+
         <div className="recipe-detail__grid">
           <section className="panel">
             <div className="section-heading">
@@ -167,8 +293,17 @@ export function RecipeDetailPage({
 
             {steps.length ? (
               <ol className="steps-list">
-                {steps.map((step) => (
-                  <li key={step}>{step.replace(/^\d+\.\s*/, '')}</li>
+                {steps.map((step, index) => (
+                  <li
+                    key={step}
+                    className={
+                      index === recipeSpeech.currentStepIndex
+                        ? 'is-current'
+                        : undefined
+                    }
+                  >
+                    {step.replace(/^\d+\.\s*/, '')}
+                  </li>
                 ))}
               </ol>
             ) : (

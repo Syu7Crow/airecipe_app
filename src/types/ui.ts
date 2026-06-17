@@ -11,6 +11,14 @@ export type IconName =
   | 'message'
   | 'plus'
   | 'arrow'
+  | 'volume'
+  | 'play'
+  | 'pause'
+  | 'stop'
+  | 'mic'
+  | 'skipBack'
+  | 'skipForward'
+  | 'repeat'
 
 export type FeatureTone =
   | 'green'
