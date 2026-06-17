@@ -1222,7 +1222,7 @@ button:disabled {
 }
 
 .history-page {
-  width: min(980px, calc(100% - 40px));
+  width: min(1080px, calc(100% - 40px));
   margin: 0 auto;
   padding: var(--page-padding-top) 0 var(--page-padding-bottom);
 }
@@ -1988,13 +1988,16 @@ button:disabled {
   margin-top: 0;
 }
 
-.contact-page,
+.contact-page {
+  max-width: 1080px;
+}
+
 .admin-page {
   max-width: 1040px;
 }
 
 .contact-form {
-  max-width: 760px;
+  max-width: none;
 }
 
 .contact-form__actions {
@@ -3154,7 +3157,7 @@ button:disabled {
 }
 
 .ingredient-register-page--wide {
-  width: min(980px, calc(100% - 40px));
+  width: min(1080px, calc(100% - 40px));
 }
 
 .ingredient-register-page__lead {
