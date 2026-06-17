@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { Icon } from '../components/Icon'
 import { deleteSavedRecipe, fetchSavedRecipes } from '../lib/recipeApi'
 import { getCache, setCache } from '../lib/dataCache'
 import { useI18n } from '../lib/useI18n'
@@ -346,7 +347,10 @@ export function CookingHistoryPage({
             className="secondary-button back-home-button"
             onClick={() => onNavigate?.('home')}
           >
-            {t('common.backHome')}
+            <div style={{ transform: 'scaleX(-1)', display: 'inline-flex' }}>
+              <Icon name="arrow" />
+            </div>
+            <span>{t('common.backHome')}</span>
           </button>
         </div>
 

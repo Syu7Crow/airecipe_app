@@ -3042,6 +3042,12 @@ button:disabled {
   background-color: var(--surface-soft);
 }
 
+@media (min-width: 701px) {
+  .fridge-table tbody tr.fridge-detail-row {
+    cursor: pointer;
+  }
+}
+
 .ingredient-name-cell {
   font-weight: 600;
 }

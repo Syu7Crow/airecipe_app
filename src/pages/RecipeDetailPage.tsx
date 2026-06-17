@@ -159,7 +159,10 @@ export function RecipeDetailPage({
       <main className="recipe-detail">
         <div className="recipe-detail__toolbar">
           <button type="button" className="secondary-button" onClick={onBack}>
-            {t('common.back')}
+            <div style={{ transform: 'scaleX(-1)', display: 'inline-flex' }}>
+              <Icon name="arrow" />
+            </div>
+            <span>{t('common.back')}</span>
           </button>
           <button
             type="button"

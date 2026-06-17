@@ -375,7 +375,10 @@ export function IngredientRegisterPage({
             className="secondary-button back-home-button"
             onClick={() => onNavigate?.('home')}
           >
-            {t('common.backHome')}
+            <div style={{ transform: 'scaleX(-1)', display: 'inline-flex' }}>
+              <Icon name="arrow" />
+            </div>
+            <span>{t('common.backHome')}</span>
           </button>
         </div>
 

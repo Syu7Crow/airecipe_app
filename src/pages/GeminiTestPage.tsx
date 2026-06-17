@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Icon } from '../components/Icon'
 import { generateGeminiContent } from '../lib/geminiApi'
 import { useI18n } from '../lib/useI18n'
 import type { AppDestination } from '../types/ui'
@@ -111,7 +112,10 @@ export function GeminiTestPage({
             className="secondary-button back-home-button"
             onClick={() => onNavigate?.('home')}
           >
-            {t('common.backHome')}
+            <div style={{ transform: 'scaleX(-1)', display: 'inline-flex' }}>
+              <Icon name="arrow" />
+            </div>
+            <span>{t('common.backHome')}</span>
           </button>
         </div>
 

@@ -740,6 +740,22 @@ export function FridgePage({
     setIsSelectionMode(false)
   }
 
+  function shouldUseRowDetailClick() {
+    if (typeof window === 'undefined') {
+      return false
+    }
+
+    return !window.matchMedia('(max-width: 700px)').matches
+  }
+
+  function handleIngredientRowClick(item: AggregatedIngredient) {
+    if (isSelectionMode || !shouldUseRowDetailClick()) {
+      return
+    }
+
+    setDetailIngredient(item)
+  }
+
   if (error) {
     return (
       <>
@@ -1078,19 +1094,23 @@ export function FridgePage({
                             itemIds.length > 0 &&
                             itemIds.every((id) => selectedInventoryIds.has(id))
                           
-                          let rowClassName = ''
+                          const rowClassNames = []
                           if (isExpiredItem) {
-                            rowClassName = 'expired-row'
+                            rowClassNames.push('expired-row')
                           } else if (isWarning) {
-                            rowClassName = 'near-expiration-row'
+                            rowClassNames.push('near-expiration-row')
+                          }
+                          if (!isSelectionMode) {
+                            rowClassNames.push('fridge-detail-row')
                           }
 
                           return (
                             <tr
                               key={item.key}
-                              className={rowClassName}
+                              className={rowClassNames.join(' ')}
                               data-expired={isExpiredItem ? "true" : undefined}
                               data-near-expiration={isWarning ? "true" : undefined}
+                              onClick={() => handleIngredientRowClick(item)}
                             >
                               {isSelectionMode ? (
                                 <td>
@@ -1114,7 +1134,10 @@ export function FridgePage({
                                 <button
                                   type="button"
                                   className="ingredient-name-link"
-                                  onClick={() => setDetailIngredient(item)}
+                                  onClick={(event) => {
+                                    event.stopPropagation()
+                                    setDetailIngredient(item)
+                                  }}
                                 >
                                   {item.name}
                                 </button>
@@ -1161,7 +1184,10 @@ export function FridgePage({
                                   <button
                                     type="button"
                                     className="small-button"
-                                    onClick={() => setDetailIngredient(item)}
+                                    onClick={(event) => {
+                                      event.stopPropagation()
+                                      setDetailIngredient(item)
+                                    }}
                                   >
                                     {t('fridge.action.detail')}
                                   </button>
