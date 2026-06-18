@@ -41,6 +41,13 @@ import {
   parseReceiptText,
 } from './receipts.js'
 import {
+  createShoppingListForUser,
+  deleteShoppingListForUser,
+  getShoppingListForUser,
+  getShoppingListsForUser,
+  updateShoppingListForUser,
+} from './shopping.js'
+import {
   getUserPreferences,
   updateUserPreferences,
 } from './preferences.js'
@@ -489,6 +496,46 @@ export async function handleApiRequest(request, response) {
 
   if (request.method === 'POST' && url.pathname === '/api/receipts/import-detail') {
     await handleReceiptImportDetail(request, response, authUser.id)
+    return
+  }
+
+  if (request.method === 'GET' && url.pathname === '/api/shopping-lists') {
+    await handleShoppingLists(authUser.id, response)
+    return
+  }
+
+  if (request.method === 'POST' && url.pathname === '/api/shopping-lists') {
+    await handleShoppingListCreate(request, response, authUser.id)
+    return
+  }
+
+  const shoppingListMatch = url.pathname.match(/^\/api\/shopping-lists\/([^/]+)$/)
+
+  if (request.method === 'GET' && shoppingListMatch) {
+    await handleShoppingList(
+      authUser.id,
+      response,
+      shoppingListMatch[1],
+    )
+    return
+  }
+
+  if (request.method === 'PATCH' && shoppingListMatch) {
+    await handleShoppingListUpdate(
+      request,
+      response,
+      authUser.id,
+      shoppingListMatch[1],
+    )
+    return
+  }
+
+  if (request.method === 'DELETE' && shoppingListMatch) {
+    await handleShoppingListDelete(
+      response,
+      authUser.id,
+      shoppingListMatch[1],
+    )
     return
   }
 
@@ -1304,6 +1351,110 @@ async function handleReceiptImportDetail(request, response, userId) {
       ok: false,
       message:
         error instanceof Error ? error.message : 'Receipt import detail failed',
+    })
+  }
+}
+
+async function handleShoppingLists(userId, response) {
+  try {
+    const result = await getShoppingListsForUser(userId)
+    sendJson(response, 200, {
+      ok: true,
+      ...result,
+    })
+  } catch (error) {
+    sendJson(response, 500, {
+      ok: false,
+      message:
+        error instanceof Error ? error.message : 'Shopping lists request failed',
+    })
+  }
+}
+
+async function handleShoppingList(userId, response, shoppingListId) {
+  try {
+    const result = await getShoppingListForUser(userId, shoppingListId)
+    sendJson(response, 200, {
+      ok: true,
+      ...result,
+    })
+  } catch (error) {
+    const statusCode =
+      error instanceof Error && error.message === 'Shopping list not found'
+        ? 404
+        : 500
+    sendJson(response, statusCode, {
+      ok: false,
+      message:
+        error instanceof Error ? error.message : 'Shopping list request failed',
+    })
+  }
+}
+
+async function handleShoppingListCreate(request, response, userId) {
+  try {
+    const body = await readJsonBody(request)
+    const result = await createShoppingListForUser({
+      userId,
+      payload: body,
+    })
+    sendJson(response, 200, {
+      ok: true,
+      ...result,
+    })
+  } catch (error) {
+    const statusCode =
+      error instanceof Error && /required|名前/.test(error.message) ? 400 : 500
+    sendJson(response, statusCode, {
+      ok: false,
+      message:
+        error instanceof Error ? error.message : 'Shopping list create failed',
+    })
+  }
+}
+
+async function handleShoppingListUpdate(request, response, userId, shoppingListId) {
+  try {
+    const body = await readJsonBody(request)
+    const result = await updateShoppingListForUser({
+      userId,
+      shoppingListId,
+      payload: body,
+    })
+    sendJson(response, 200, {
+      ok: true,
+      ...result,
+    })
+  } catch (error) {
+    const statusCode =
+      error instanceof Error && error.message === 'Shopping list not found'
+        ? 404
+        : error instanceof Error && /required|名前/.test(error.message)
+          ? 400
+          : 500
+    sendJson(response, statusCode, {
+      ok: false,
+      message:
+        error instanceof Error ? error.message : 'Shopping list update failed',
+    })
+  }
+}
+
+async function handleShoppingListDelete(response, userId, shoppingListId) {
+  try {
+    const result = await deleteShoppingListForUser({
+      userId,
+      shoppingListId,
+    })
+    sendJson(response, 200, {
+      ok: true,
+      ...result,
+    })
+  } catch (error) {
+    sendJson(response, 500, {
+      ok: false,
+      message:
+        error instanceof Error ? error.message : 'Shopping list delete failed',
     })
   }
 }

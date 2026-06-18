@@ -14,7 +14,18 @@ import {
   fetchSavedRecipes,
   fetchCookingHistory,
 } from '../lib/recipeApi'
-import type { AppDestination, Ingredient, Recipe } from '../types/ui'
+import {
+  createShoppingList,
+  deleteShoppingList,
+  fetchShoppingLists,
+  fetchShoppingList,
+} from '../lib/shoppingApi'
+import type {
+  AppDestination,
+  Ingredient,
+  Recipe,
+  ShoppingListSummary,
+} from '../types/ui'
 
 type ShoppingItem = {
   id: string
@@ -92,6 +103,8 @@ function getShoppingItemKey(name: string) {
   return name.trim().toLowerCase()
 }
 
+const RECIPE_PAGE_SIZE = 12
+
 export function ShoppingListPage({
   onNavigate,
 }: {
@@ -112,19 +125,14 @@ export function ShoppingListPage({
 
   const [selectedRecipeIds, setSelectedRecipeIds] = useState<Set<string>>(() => new Set())
   const [isRecipeListOpen, setIsRecipeListOpen] = useState(true)
+  const [visibleRecipeCount, setVisibleRecipeCount] = useState(RECIPE_PAGE_SIZE)
 
-  const [manualItems, setManualItems] = useState<Omit<ShoppingItem, 'checked'>[]>(() => {
-    if (typeof window !== 'undefined') {
-      try {
-        const stored = window.localStorage.getItem('ai-recipe-manual-shopping')
-        const parsed = stored ? JSON.parse(stored) : []
-        return Array.isArray(parsed) ? parsed : []
-      } catch (error) {
-        console.warn('[vite] Failed to read manual shopping items:', error)
-      }
-    }
-    return []
-  })
+  const [manualItems, setManualItems] = useState<Omit<ShoppingItem, 'checked'>[]>([])
+  const [savedLists, setSavedLists] = useState<ShoppingListSummary[]>([])
+  const [isSaveModalOpen, setIsSaveModalOpen] = useState(false)
+  const [isLoadModalOpen, setIsLoadModalOpen] = useState(false)
+  const [saveListName, setSaveListName] = useState('')
+  const [isShoppingListLoading, setIsShoppingListLoading] = useState(false)
 
   const [searchQuery, setSearchQuery] = useState('')
   const deferredSearchQuery = useDeferredValue(searchQuery)
@@ -199,14 +207,30 @@ export function ShoppingListPage({
   }, [language, t])
 
   useEffect(() => {
+    // Clear legacy localStorage shopping data so stale lists don't reappear
+    // when navigating back to this page.
     if (typeof window !== 'undefined') {
-      try {
-        window.localStorage.setItem('ai-recipe-manual-shopping', JSON.stringify(manualItems))
-      } catch (error) {
-        console.warn('[vite] Failed to save manual shopping items:', error)
-      }
+      window.localStorage.removeItem('ai-recipe-manual-shopping')
     }
-  }, [manualItems])
+  }, [])
+
+  useEffect(() => {
+    let isMounted = true
+
+    fetchShoppingLists()
+      .then((result) => {
+        if (!isMounted) return
+        setSavedLists(result.shoppingLists)
+      })
+      .catch((error) => {
+        if (!isMounted) return
+        console.warn('[vite] Failed to fetch shopping lists:', error)
+      })
+
+    return () => {
+      isMounted = false
+    }
+  }, [])
 
   const shoppingItems = useMemo(() => {
     const requiredMap = new Map<string, { name: string; g: number; pcs: number; recipes: Set<string> }>()
@@ -460,6 +484,96 @@ export function ShoppingListPage({
     setIsCategoryDropdownOpen(false)
   }
 
+  async function handleSaveShoppingList(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+
+    const name = saveListName.trim()
+    if (!name) {
+      showToast(t('shopping.nameRequired'))
+      return
+    }
+
+    if (shoppingItems.length === 0) {
+      showToast(t('shopping.addSelectedNone'))
+      return
+    }
+
+    setIsShoppingListLoading(true)
+
+    try {
+      const result = await createShoppingList({
+        name,
+        items: shoppingItems.map((item) => ({
+          name: item.name,
+          category: item.category,
+          quantity: item.quantity,
+          gram: item.gram,
+          memo: item.memo ?? null,
+          checked: item.checked,
+        })),
+      })
+      setSavedLists((current) =>
+        [result.shoppingList, ...current].sort(
+          (left, right) =>
+            new Date(right.updatedAt).getTime() -
+            new Date(left.updatedAt).getTime(),
+        ),
+      )
+      setSaveListName('')
+      setIsSaveModalOpen(false)
+      showToast(t('shopping.saveSuccess'))
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : t('shopping.saveFailed'))
+    } finally {
+      setIsShoppingListLoading(false)
+    }
+  }
+
+  async function handleLoadShoppingList(shoppingListId: string) {
+    setIsShoppingListLoading(true)
+
+    try {
+      const result = await fetchShoppingList(shoppingListId)
+      const loadedItems = result.shoppingList.items.map((item, index) => ({
+        id: item.itemId ?? `manual-${Date.now()}-${index}`,
+        name: item.name,
+        category: item.category,
+        quantity: item.quantity,
+        gram: item.gram,
+        isManual: true,
+        memo: item.memo ?? undefined,
+      }))
+      setManualItems(loadedItems)
+      setCheckedItemIds(
+        new Set(
+          result.shoppingList.items
+            .filter((item) => item.checked && item.itemId)
+            .map((item) => item.itemId as string),
+        ),
+      )
+      setIsLoadModalOpen(false)
+      showToast(t('shopping.loadSuccess'))
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : t('shopping.loadFailed'))
+    } finally {
+      setIsShoppingListLoading(false)
+    }
+  }
+
+  async function handleDeleteSavedList(shoppingListId: string) {
+    setIsShoppingListLoading(true)
+
+    try {
+      const result = await deleteShoppingList(shoppingListId)
+      setSavedLists(result.shoppingLists)
+      showToast(t('shopping.deleteSuccess'))
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : t('shopping.deleteFailed'))
+    } finally {
+      setIsShoppingListLoading(false)
+    }
+  }
+
   function getCategoryLabel(category: string) {
     switch (category) {
       case '肉・卵・魚':
@@ -635,28 +749,50 @@ export function ShoppingListPage({
                 {t('history.empty')}
               </p>
             ) : (
-              <div className="shopping-recipe-grid">
-                {recipes.map((recipe) => {
-                  const key = recipe.recipeId || recipe.name
-                  if (!key) return null
-                  const isSelected = selectedRecipeIds.has(key)
-                  return (
-                    <label
-                      key={key}
-                      className={`shopping-recipe-option ${isSelected ? 'is-selected' : ''}`}
+              <>
+                <div className="shopping-recipe-grid card-stagger">
+                  {recipes.slice(0, visibleRecipeCount).map((recipe) => {
+                    const key = recipe.recipeId || recipe.name
+                    if (!key) return null
+                    const isSelected = selectedRecipeIds.has(key)
+                    return (
+                      <label
+                        key={key}
+                        className={`shopping-recipe-option ${isSelected ? 'is-selected' : ''}`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={() => toggleRecipeSelection(key)}
+                        />
+                        <span className="ingredient-name">
+                          {recipe.name}
+                        </span>
+                      </label>
+                    )
+                  })}
+                </div>
+                {visibleRecipeCount < recipes.length && (
+                  <div className="shopping-recipe-more">
+                    <button
+                      type="button"
+                      className="primary-button"
+                      onClick={() =>
+                        setVisibleRecipeCount((current) =>
+                          Math.min(current + RECIPE_PAGE_SIZE, recipes.length),
+                        )
+                      }
                     >
-                      <input
-                        type="checkbox"
-                        checked={isSelected}
-                        onChange={() => toggleRecipeSelection(key)}
-                      />
-                      <span className="ingredient-name">
-                        {recipe.name}
+                      <span>{t('shopping.showMore', {
+                        remaining: recipes.length - visibleRecipeCount,
+                      })}</span>
+                      <span style={{ display: 'inline-flex', transform: 'rotate(90deg)' }}>
+                        <Icon name="arrow" />
                       </span>
-                    </label>
-                  )
-                })}
-              </div>
+                    </button>
+                  </div>
+                )}
+              </>
             )}
           </div>
         )}
@@ -756,12 +892,26 @@ export function ShoppingListPage({
         <div>
           <p className="eyebrow">{t('shopping.memoEyebrow')}</p>
           <h2>{t('shopping.listTitle')}</h2>
+          <p className="settings-section__description shopping-list-heading__description">
+            {t('shopping.markBoughtHint')}
+          </p>
         </div>
-        <p
-          className="settings-section__description shopping-list-heading__description"
-        >
-          {t('shopping.markBoughtHint')}
-        </p>
+        <div className="shopping-list-actions">
+          <button
+            type="button"
+            className="secondary-button"
+            onClick={() => setIsLoadModalOpen(true)}
+          >
+            {t('shopping.loadListBtn')}
+          </button>
+          <button
+            type="button"
+            className="primary-button"
+            onClick={() => setIsSaveModalOpen(true)}
+          >
+            {t('shopping.saveListBtn')}
+          </button>
+        </div>
       </div>
 
       {shoppingItems.length === 0 ? (
@@ -847,6 +997,111 @@ export function ShoppingListPage({
           })}
         </div>
       )}
+      {isSaveModalOpen && (
+        <div
+          className="modal-backdrop"
+          role="presentation"
+          onClick={(event) => {
+            if (event.target === event.currentTarget) {
+              setIsSaveModalOpen(false)
+            }
+          }}
+        >
+          <div className="cook-modal">
+            <h2>{t('shopping.saveListTitle')}</h2>
+            <p className="settings-section__description">
+              {t('shopping.saveListDescription', { count: shoppingItems.length })}
+            </p>
+            <form onSubmit={handleSaveShoppingList}>
+              <label className="serving-field">
+                <span>{t('shopping.saveListNameLabel')}</span>
+                <input
+                  type="text"
+                  value={saveListName}
+                  placeholder={t('shopping.saveListNamePlaceholder')}
+                  onChange={(event) => setSaveListName(event.target.value)}
+                  disabled={isShoppingListLoading}
+                />
+              </label>
+              <div className="modal-actions">
+                <button
+                  type="button"
+                  className="secondary-button"
+                  onClick={() => setIsSaveModalOpen(false)}
+                  disabled={isShoppingListLoading}
+                >
+                  {t('common.cancel')}
+                </button>
+                <button
+                  type="submit"
+                  className="primary-button"
+                  disabled={isShoppingListLoading}
+                >
+                  {isShoppingListLoading ? t('common.saving') : t('shopping.saveListBtn')}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {isLoadModalOpen && (
+        <div
+          className="modal-backdrop"
+          role="presentation"
+          onClick={(event) => {
+            if (event.target === event.currentTarget) {
+              setIsLoadModalOpen(false)
+            }
+          }}
+        >
+          <div className="cook-modal">
+            <h2>{t('shopping.loadListTitle')}</h2>
+            {savedLists.length === 0 ? (
+              <p className="settings-section__description">
+                {t('shopping.loadListEmpty')}
+              </p>
+            ) : (
+              <ul className="shopping-saved-list">
+                {savedLists.map((list) => (
+                  <li key={list.shoppingListId} className="shopping-saved-list__item">
+                    <button
+                      type="button"
+                      className="shopping-saved-list__name"
+                      onClick={() => handleLoadShoppingList(list.shoppingListId)}
+                      disabled={isShoppingListLoading}
+                    >
+                      <span>{list.name}</span>
+                      <small>
+                        {t('shopping.itemCount', { count: list.itemCount })}
+                      </small>
+                    </button>
+                    <button
+                      type="button"
+                      className="danger-text-button"
+                      onClick={() => handleDeleteSavedList(list.shoppingListId)}
+                      disabled={isShoppingListLoading}
+                    >
+                      {t('shopping.deleteBtn')}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+            <div className="modal-actions">
+              <button
+                type="button"
+                className="secondary-button"
+                onClick={() => setIsLoadModalOpen(false)}
+                disabled={isShoppingListLoading}
+              >
+                {t('common.close')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {toastMessage ? (
         <div className="toast-message" role="status">
           {toastMessage}

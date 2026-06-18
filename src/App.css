@@ -3078,6 +3078,362 @@ button:disabled {
   color: var(--ink);
 }
 
+/* Shopping List Page */
+.shopping-page {
+  display: grid;
+  gap: var(--section-gap);
+}
+
+.shopping-page .fridge-header {
+  margin-bottom: 0;
+}
+
+.shopping-page .ingredient-detail-summary {
+  margin: 4px 0 0;
+}
+
+.shopping-page .fridge-error {
+  padding: 40px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.shopping-panel {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: var(--shadow-subtle);
+}
+
+.shopping-manual-panel {
+  display: grid;
+  gap: 16px;
+}
+
+.shopping-manual-panel .settings-section__description {
+  max-width: 720px;
+}
+
+.shopping-form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 12px;
+  align-items: end;
+}
+
+.shopping-form-grid--footer {
+  grid-template-columns: minmax(180px, 1fr) auto;
+  margin-top: 12px;
+}
+
+.shopping-form-grid--footer .primary-button {
+  min-width: 140px;
+  height: 42px;
+}
+
+.shopping-recipe-panel {
+  overflow: hidden;
+}
+
+.shopping-section-toggle {
+  display: flex;
+  width: 100%;
+  min-height: 52px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 20px;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  background: #fff;
+  color: var(--ink);
+  font: inherit;
+  font-size: 16px;
+  font-weight: 800;
+  text-align: left;
+  cursor: pointer;
+}
+
+.shopping-section-toggle:hover {
+  background: var(--surface-soft);
+}
+
+.shopping-section-toggle__icon {
+  display: inline-flex;
+  flex: 0 0 auto;
+  color: var(--muted);
+  transition: transform 140ms ease;
+}
+
+.shopping-section-toggle__icon.is-open {
+  transform: rotate(90deg);
+}
+
+.shopping-recipe-panel__body {
+  padding: 20px;
+}
+
+.shopping-recipe-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: var(--space-3);
+}
+
+.shopping-recipe-option {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: 52px;
+  padding: var(--panel-padding);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: var(--shadow-subtle);
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition:
+    background-color 140ms ease,
+    border-color 140ms ease,
+    transform 140ms ease;
+}
+
+.shopping-recipe-option:hover {
+  border-color: var(--subtle);
+  background: var(--surface-soft);
+  transform: translateY(-1px);
+}
+
+.shopping-recipe-option.is-selected {
+  border-color: var(--control-ink);
+  background: var(--surface-soft);
+}
+
+.shopping-recipe-option input {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 auto;
+  accent-color: var(--control-ink);
+}
+
+.shopping-recipe-option .ingredient-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.shopping-recipe-more {
+  display: flex;
+  justify-content: center;
+  margin-top: var(--space-4);
+}
+
+.shopping-recipe-more .primary-button {
+  min-height: 40px;
+  padding: 0 20px;
+}
+
+.shopping-filter-panel {
+  margin-bottom: 0;
+}
+
+.shopping-bulk-actions {
+  justify-content: space-between;
+  padding: 12px 20px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-soft);
+  box-shadow: none;
+}
+
+.shopping-bulk-actions span {
+  margin: 0;
+  color: var(--ink);
+  font-weight: 700;
+}
+
+.shopping-bulk-actions .primary-button {
+  min-height: 38px;
+  padding: 0 16px;
+  font-size: 13px;
+}
+
+.shopping-list-heading {
+  align-items: end;
+  margin-bottom: 0;
+}
+
+.shopping-list-heading__description {
+  max-width: 420px;
+}
+
+.shopping-list-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.shopping-list-actions .primary-button,
+.shopping-list-actions .secondary-button {
+  min-height: 38px;
+  padding: 0 14px;
+  font-size: 13px;
+}
+
+.shopping-saved-list {
+  display: grid;
+  gap: var(--space-2);
+  margin: var(--space-4) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.shopping-saved-list__item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-soft);
+}
+
+.shopping-saved-list__name {
+  display: grid;
+  flex: 1;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  font-weight: 700;
+  text-align: left;
+  cursor: pointer;
+}
+
+.shopping-saved-list__name:hover span {
+  text-decoration: underline;
+}
+
+.shopping-saved-list__name span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.shopping-saved-list__name small {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.shopping-page .category-table-wrapper {
+  border-radius: 8px;
+}
+
+.shopping-page .category-title {
+  padding: 14px 20px;
+  background: #fff;
+  color: var(--ink);
+  font-size: 16px;
+  border-bottom: 1px solid var(--line);
+}
+
+.shopping-table {
+  table-layout: fixed;
+}
+
+.shopping-table th:nth-child(1),
+.shopping-table td:nth-child(1) {
+  width: 48px;
+  min-width: 48px;
+  padding-right: 6px;
+  text-align: center;
+}
+
+.shopping-table th:nth-child(2),
+.shopping-table td:nth-child(2) {
+  width: 28%;
+  min-width: 180px;
+  white-space: normal;
+}
+
+.shopping-table th:nth-child(3),
+.shopping-table td:nth-child(3),
+.shopping-table th:nth-child(4),
+.shopping-table td:nth-child(4) {
+  width: 15%;
+  min-width: 100px;
+  white-space: nowrap;
+}
+
+.shopping-table th:nth-child(5),
+.shopping-table td:nth-child(5) {
+  width: 42%;
+  min-width: 220px;
+  white-space: normal;
+}
+
+.shopping-table tbody tr {
+  cursor: pointer;
+}
+
+.shopping-table td {
+  vertical-align: middle;
+}
+
+.shopping-table .ingredient-name {
+  font-weight: 800;
+}
+
+.shopping-item-badge {
+  display: inline-flex;
+  margin-left: 8px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: var(--line);
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.shopping-table__memo {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.shopping-item-delete-button {
+  min-height: 30px;
+  margin-left: 10px;
+  padding: 0 10px;
+  font-size: 12px;
+}
+
+@media (max-width: 700px) {
+  .shopping-form-grid,
+  .shopping-form-grid--footer {
+    grid-template-columns: 1fr;
+  }
+
+  .shopping-form-grid--footer .primary-button {
+    width: 100%;
+  }
+
+  .shopping-section-toggle,
+  .shopping-recipe-panel__body,
+  .shopping-bulk-actions {
+    padding-inline: 16px;
+  }
+
+  .shopping-list-heading {
+    align-items: start;
+  }
+}
+
 .expiry-alert {
   color: var(--warning);
   font-weight: 700;

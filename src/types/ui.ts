@@ -111,6 +111,29 @@ export type RecipeModelChoice = 'gemini' | 'groq'
 
 export type SeasoningMode = 'unlimited' | 'strict'
 
+export type ShoppingListItem = {
+  itemId?: string
+  name: string
+  category: string
+  quantity: number | null
+  gram: number | null
+  memo: string | null
+  checked: boolean
+  sortOrder?: number
+}
+
+export type ShoppingListSummary = {
+  shoppingListId: string
+  name: string
+  itemCount: number
+  createdAt: string
+  updatedAt: string
+}
+
+export type ShoppingList = ShoppingListSummary & {
+  items: ShoppingListItem[]
+}
+
 export type UserPreferences = {
   defaultServings: number
   avoidedIngredients: string
