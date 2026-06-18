@@ -275,7 +275,6 @@ export function Topbar({ currentPage, onNavigate, onLogout }: TopbarProps) {
   }> = [
     { page: 'fridge', href: '#ingredients', label: t('topbar.ingredients') },
     { page: 'recipe-generate', href: '#recipes', label: t('topbar.recipes') },
-    { page: 'shopping-list', href: '#shopping', label: t('topbar.shoppingList') },
     { page: 'ingredient-register', href: '#receipt', label: t('topbar.receipt') },
     { page: 'history', href: '#history', label: t('topbar.history') },
   ]

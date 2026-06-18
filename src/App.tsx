@@ -206,6 +206,7 @@ function preloadAuthenticatedRouteModules(
     admin: loadAdminConsolePage,
     recipe: loadRecipeDetailPage,
     'receipt-detail': loadReceiptDetailRegisterPage,
+    'shopping-list': loadShoppingListPage,
     test: loadGeminiTestPage,
   }
   const primaryPages: Page[] = [
@@ -217,12 +218,14 @@ function preloadAuthenticatedRouteModules(
     'history',
     'settings',
   ]
-  const secondaryLoaders = [
-    loadSettingsPage,
-    loadContactPage,
-    loadReceiptScanPage,
-    loadRecipeDetailPage,
-    loadShoppingListPage,
+  const secondaryPages: Page[] = [
+    'receipt',
+    'contact',
+    'recipe',
+    'receipt-detail',
+    'shopping-list',
+    'test',
+    ...(includeAdmin ? (['admin'] as const) : []),
   ]
   const orderedPages = Array.from(new Set([...primaryPages, ...secondaryPages]))
   const loaders = orderedPages

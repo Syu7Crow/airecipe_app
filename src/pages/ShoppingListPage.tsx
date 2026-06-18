@@ -88,8 +88,13 @@ export function ShoppingListPage({
 
   const [manualItems, setManualItems] = useState<Omit<ShoppingItem, 'checked'>[]>(() => {
     if (typeof window !== 'undefined') {
-      const stored = window.localStorage.getItem('ai-recipe-manual-shopping')
-      return stored ? JSON.parse(stored) : []
+      try {
+        const stored = window.localStorage.getItem('ai-recipe-manual-shopping')
+        const parsed = stored ? JSON.parse(stored) : []
+        return Array.isArray(parsed) ? parsed : []
+      } catch (error) {
+        console.warn('[vite] Failed to read manual shopping items:', error)
+      }
     }
     return []
   })
@@ -144,7 +149,11 @@ export function ShoppingListPage({
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      window.localStorage.setItem('ai-recipe-manual-shopping', JSON.stringify(manualItems))
+      try {
+        window.localStorage.setItem('ai-recipe-manual-shopping', JSON.stringify(manualItems))
+      } catch (error) {
+        console.warn('[vite] Failed to save manual shopping items:', error)
+      }
     }
   }, [manualItems])
 
@@ -262,6 +271,18 @@ export function ShoppingListPage({
         next.delete(recipeId)
       } else {
         next.add(recipeId)
+      }
+      return next
+    })
+  }
+
+  function toggleShoppingItem(itemId: string) {
+    setCheckedItemIds((current) => {
+      const next = new Set(current)
+      if (next.has(itemId)) {
+        next.delete(itemId)
+      } else {
+        next.add(itemId)
       }
       return next
     })
@@ -613,6 +634,7 @@ export function ShoppingListPage({
                   <table className="fridge-table">
                     <thead>
                       <tr>
+                        <th aria-label={t('history.selection.item')}></th>
                         <th>{t('fridge.table.ingredient')}</th>
                         <th>{t('fridge.form.quantity')}</th>
                         <th>{t('fridge.form.gram')}</th>
@@ -621,7 +643,22 @@ export function ShoppingListPage({
                     </thead>
                     <tbody>
                       {items.map((item) => (
-                        <tr key={item.id} className={item.checked ? 'near-expiration-row' : ''}>
+                        <tr
+                          key={item.id}
+                          className={item.checked ? 'near-expiration-row' : ''}
+                          onClick={() => toggleShoppingItem(item.id)}
+                          style={{ cursor: 'pointer' }}
+                        >
+                          <td style={{ width: '48px', textAlign: 'center', verticalAlign: 'middle' }}>
+                            <input
+                              type="checkbox"
+                              aria-label={t('fridge.selection.selectAria', { name: item.name })}
+                              checked={item.checked}
+                              onClick={(event) => event.stopPropagation()}
+                              onChange={() => toggleShoppingItem(item.id)}
+                              style={{ width: '18px', height: '18px', accentColor: 'var(--control-ink)' }}
+                            />
+                          </td>
                           <td className="ingredient-name-cell" style={{ verticalAlign: 'middle' }}>
                             <span className="ingredient-name" style={{ fontWeight: '800' }}>{item.name}</span>
                             {item.isManual && (
@@ -639,10 +676,10 @@ export function ShoppingListPage({
                             )}
                           </td>
                           <td style={{ verticalAlign: 'middle' }}>
-                            {item.quantity ? `${item.quantity}個` : '-'}
+                            {item.quantity ? t('shopping.amountText', { amount: item.quantity }) : '-'}
                           </td>
                           <td style={{ verticalAlign: 'middle' }}>
-                            {item.gram ? `${item.gram}g` : '-'}
+                            {item.gram ? t('shopping.weightText', { weight: item.gram }) : '-'}
                           </td>
                           <td style={{ color: 'var(--muted)', fontSize: '13px', verticalAlign: 'middle' }}>
                             {item.memo || '-'}

@@ -44,6 +44,7 @@ const preloadPriorityByPage: Record<string, PreloadTaskKey[]> = {
   settings: ['preferences', 'inventory', 'recipes'],
   recipe: ['preferences', 'recipes', 'inventory'],
   'ingredient-register': ['inventory', 'preferences', 'recipes'],
+  'shopping-list': ['inventory', 'recipes', 'preferences'],
   receipt: ['inventory', 'preferences', 'recipes'],
   'receipt-detail': ['inventory', 'preferences', 'recipes'],
   contact: ['preferences', 'inventory', 'recipes'],

@@ -3,7 +3,7 @@ import { isSupabaseServiceRoleConfigured, supabase } from './supabase.js'
 const metadataKey = 'ai_recipe_preferences'
 
 export const defaultUserPreferences = {
-  defaultServings: 2,
+  defaultServings: 1,
   avoidedIngredients: '',
   recipeModel: 'gemini',
   displayLanguage: 'ja',

@@ -44,11 +44,11 @@ export function getPrimaryFeatures(t: TranslateFn): Feature[] {
 export function getSecondaryFeatures(t: TranslateFn): Feature[] {
   return [
     {
-      title: t('home.secondary.favoriteTitle'),
-      description: t('home.secondary.favoriteDescription'),
-      action: t('home.secondary.favoriteAction'),
-      icon: 'heart',
-      tone: 'red',
+      title: t('home.feature.shoppingTitle'),
+      description: t('home.feature.shoppingDescription'),
+      action: t('home.feature.shoppingAction'),
+      icon: 'list',
+      tone: 'blue',
     },
     {
       title: t('home.secondary.settingsTitle'),

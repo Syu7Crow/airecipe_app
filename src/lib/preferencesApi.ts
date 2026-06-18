@@ -2,7 +2,7 @@ import type { UserPreferences } from '../types/ui'
 import { getJson, patchJson } from './apiClient'
 
 export const defaultPreferences: UserPreferences = {
-  defaultServings: 2,
+  defaultServings: 1,
   avoidedIngredients: '',
   recipeModel: 'gemini',
   displayLanguage: 'ja',

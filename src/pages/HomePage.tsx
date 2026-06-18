@@ -121,7 +121,6 @@ function buildSummaryItems(
 export function HomePage({
   onNavigate,
   onSelectRecipe,
-  onShowFavorites,
 }: HomePageProps) {
   const { language, t } = useI18n()
   const [ingredients, setIngredients] = useState<Ingredient[]>([])
@@ -438,8 +437,8 @@ export function HomePage({
                 onAction={
                   feature.icon === 'settings'
                     ? () => onNavigate?.('settings')
-                    : feature.icon === 'heart'
-                      ? onShowFavorites
+                    : feature.icon === 'list'
+                      ? () => onNavigate?.('shopping-list')
                       : feature.icon === 'message'
                         ? () => onNavigate?.('contact')
                         : undefined

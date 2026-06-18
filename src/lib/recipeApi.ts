@@ -64,7 +64,7 @@ export async function deleteInventoryItem(inventoryId: number) {
 }
 
 export async function generateRecipes(
-  servings = 2,
+  servings = 1,
   language?: LanguageCode,
   avoidedIngredients?: string,
   cookingRequest?: string,
@@ -151,5 +151,4 @@ export async function setRecipeFavorite(
   dispatchInventoryUpdated()
   return result
 }
-
 

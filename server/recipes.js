@@ -705,7 +705,7 @@ function mapStoredRecipe(recipe, userId, language = 'ja') {
 
 export async function generateAndSaveRecipes({
   userId: requestedUserId,
-  servings = 2,
+  servings = 1,
   language = 'ja',
   avoidedIngredients = '',
   cookingRequest = '',
