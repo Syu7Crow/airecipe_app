@@ -579,6 +579,31 @@ export const jaMessages = {
   'notification.yesterdayOrBefore': '期限切れ',
   'notification.tomorrow': '明日まで',
   'notification.unreadMessage': '未読メッセージ',
+  // 買い物リスト関連 (Shopping List)
+  'topbar.shoppingList': '買い物',
+  'shopping.title': '買い物リスト',
+  'shopping.subtitle': '作りたい料理を選んで、足りない食材を買いに行きましょう。',
+  'shopping.searchPlaceholder': '食材名で検索',
+  'shopping.allCategories': 'すべてのカテゴリ',
+  'shopping.matchingItems': '該当件数: {count} 件',
+  'shopping.loading': '読み込み中...',
+  'shopping.empty': '該当する買うものはありません。',
+  'shopping.amountText': '個数: {amount}個',
+  'shopping.weightText': '重量: {weight}g',
+  'shopping.deleteBtn': '削除',
+  'shopping.selectedItemsText': '{count} 件を選択中',
+  'shopping.moveToFridgeBtn': 'まとめて冷蔵庫（在庫）に登録する',
+  'shopping.moveSuccessAlert': '冷蔵庫に食材を移動しました！',
+  'shopping.addNewTitle': '新しく買うものを追加',
+  'shopping.namePlaceholder': '食材名（例: キャベツ）',
+  'shopping.addBtn': '追加',
+  'shopping.memoText': '{memo}',
+  'shopping.fridgeMemo': '買い物リストから購入',
+  'shopping.selectedRecipeText': '件を選択中',
+  'recipe.autoAddToShoppingBtn': '不足分を買い物リストに登録',
+  'recipe.addedToShoppingListSuccess': '不足している食材を買い物リストに追加しました！',
+  'recipe.addedToShoppingListFailed': '買い物リストへの追加に失敗しました。',
 } as const
+
 
 export type MessageKey = keyof typeof jaMessages

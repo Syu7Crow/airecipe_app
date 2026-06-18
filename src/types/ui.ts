@@ -50,6 +50,7 @@ export type AppDestination =
   | 'register'
   | 'login'
   | 'receipt-detail'
+  | 'shopping-list'
 
 export type Ingredient = {
   inventoryId?: number
