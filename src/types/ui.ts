@@ -11,6 +11,14 @@ export type IconName =
   | 'message'
   | 'plus'
   | 'arrow'
+  | 'volume'
+  | 'play'
+  | 'pause'
+  | 'stop'
+  | 'mic'
+  | 'skipBack'
+  | 'skipForward'
+  | 'repeat'
 
 export type FeatureTone =
   | 'green'
@@ -42,6 +50,7 @@ export type AppDestination =
   | 'register'
   | 'login'
   | 'receipt-detail'
+  | 'shopping-list'
 
 export type Ingredient = {
   inventoryId?: number
@@ -111,5 +120,8 @@ export type UserPreferences = {
   notifications: {
     expiration: boolean
     expirationLeadDays: number
+  }
+  voice: {
+    enabled: boolean
   }
 }

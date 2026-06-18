@@ -32,6 +32,7 @@ export function SettingsPage({
     useState<PreferencesFeedbackArea>('preferences')
   const [toastMessage, setToastMessage] = useState('')
   const preferencesRef = useRef<UserPreferences>(defaultPreferences)
+  const preferenceMutationVersionRef = useRef(0)
   const saveTimerRef = useRef<number | null>(null)
   const toastTimerRef = useRef<number | null>(null)
   const currentLanguage = useMemo(
@@ -44,6 +45,7 @@ export function SettingsPage({
   useEffect(() => {
     let isMounted = true
     const cacheKey = `preferences:${user.id}`
+    const loadStartedAtMutationVersion = preferenceMutationVersionRef.current
 
     const cached = getCache<UserPreferences>(cacheKey)
     if (cached) {
@@ -58,7 +60,10 @@ export function SettingsPage({
 
     fetchPreferences()
       .then((result) => {
-        if (isMounted) {
+        if (
+          isMounted &&
+          preferenceMutationVersionRef.current === loadStartedAtMutationVersion
+        ) {
           setCache(cacheKey, result.preferences)
           preferencesRef.current = result.preferences
           setPreferences(result.preferences)
@@ -149,6 +154,24 @@ export function SettingsPage({
     )
   }
 
+  function updateVoicePreference(
+    key: keyof UserPreferences['voice'],
+    value: boolean,
+    delayMs = 0,
+  ) {
+    applyPreferences(
+      {
+        ...preferencesRef.current,
+        voice: {
+          ...(preferencesRef.current.voice ?? defaultPreferences.voice),
+          [key]: value,
+        },
+      },
+      'preferences',
+      delayMs,
+    )
+  }
+
   function updateDisplayLanguage(nextLanguage: UserPreferences['displayLanguage']) {
     setLanguage(nextLanguage)
     updatePreference('displayLanguage', nextLanguage, 'preferences')
@@ -159,6 +182,8 @@ export function SettingsPage({
     feedbackArea: PreferencesFeedbackArea,
     delayMs = 0,
   ) {
+    const mutationVersion = preferenceMutationVersionRef.current + 1
+    preferenceMutationVersionRef.current = mutationVersion
     preferencesRef.current = nextPreferences
     setPreferences(nextPreferences)
     setCache(`preferences:${user.id}`, nextPreferences)
@@ -171,25 +196,36 @@ export function SettingsPage({
     }
 
     if (delayMs <= 0) {
-      void persistPreferences(nextPreferences)
+      void persistPreferences(nextPreferences, mutationVersion)
       return
     }
 
     saveTimerRef.current = window.setTimeout(() => {
       saveTimerRef.current = null
-      void persistPreferences(nextPreferences)
+      void persistPreferences(nextPreferences, mutationVersion)
     }, delayMs)
   }
 
-  async function persistPreferences(nextPreferences: UserPreferences) {
+  async function persistPreferences(
+    nextPreferences: UserPreferences,
+    mutationVersion: number,
+  ) {
     try {
       const result = await savePreferences(nextPreferences)
+
+      if (mutationVersion !== preferenceMutationVersionRef.current) {
+        return
+      }
 
       setCache(`preferences:${user.id}`, result.preferences)
       preferencesRef.current = result.preferences
       setPreferences(result.preferences)
       showToast(t('settings.preferencesSaved'))
     } catch (error) {
+      if (mutationVersion !== preferenceMutationVersionRef.current) {
+        return
+      }
+
       console.error('[vite] Preferences save failed:', error)
       setPreferencesError(
         error instanceof Error
@@ -328,49 +364,67 @@ export function SettingsPage({
               </p>
             ) : null}
 
-            <div className="settings-field">
-              <label htmlFor="default-servings">
-                <strong>{t('settings.defaultServings')}</strong>
-                <span>{t('settings.defaultServingsDescription')}</span>
-              </label>
-              <input
-                id="default-servings"
-                type="number"
-                min="1"
-                max="20"
-                value={preferences.defaultServings}
-                disabled={isLoadingPreferences}
-                onChange={(event) =>
-                  updatePreference(
-                    'defaultServings',
-                    Math.max(1, Number(event.target.value) || 1),
-                    'preferences',
-                  )
-                }
-              />
+            <div className="settings-compact-grid">
+              <div className="settings-field">
+                <label htmlFor="default-servings">
+                  <strong>{t('settings.defaultServings')}</strong>
+                  <span>{t('settings.defaultServingsDescription')}</span>
+                </label>
+                <input
+                  id="default-servings"
+                  type="number"
+                  min="1"
+                  max="20"
+                  value={preferences.defaultServings}
+                  disabled={isLoadingPreferences}
+                  onChange={(event) =>
+                    updatePreference(
+                      'defaultServings',
+                      Math.max(1, Number(event.target.value) || 1),
+                      'preferences',
+                    )
+                  }
+                />
+              </div>
+
+              <div className="settings-field settings-field--compact">
+                <label htmlFor="avoided-ingredients">
+                  <strong>{t('settings.dietary')}</strong>
+                  <span>{t('settings.dietaryDescription')}</span>
+                </label>
+                <textarea
+                  id="avoided-ingredients"
+                  rows={2}
+                  value={preferences.avoidedIngredients}
+                  placeholder={t('settings.avoidPlaceholder')}
+                  disabled={isLoadingPreferences}
+                  onChange={(event) =>
+                    updatePreference(
+                      'avoidedIngredients',
+                      event.target.value,
+                      'preferences',
+                      400,
+                    )
+                  }
+                />
+              </div>
             </div>
 
-            <div className="settings-field settings-field--full">
-              <label htmlFor="avoided-ingredients">
-                <strong>{t('settings.dietary')}</strong>
-                <span>{t('settings.dietaryDescription')}</span>
+            <fieldset className="settings-fieldset">
+              <legend>{t('settings.voiceTitle')}</legend>
+              <p>{t('settings.voiceDescription')}</p>
+              <label className="settings-toggle">
+                <input
+                  type="checkbox"
+                  checked={Boolean(preferences.voice?.enabled)}
+                  disabled={isLoadingPreferences}
+                  onChange={(event) =>
+                    updateVoicePreference('enabled', event.currentTarget.checked)
+                  }
+                />
+                <span>{t('settings.voiceEnabled')}</span>
               </label>
-              <textarea
-                id="avoided-ingredients"
-                rows={4}
-                value={preferences.avoidedIngredients}
-                placeholder={t('settings.avoidPlaceholder')}
-                disabled={isLoadingPreferences}
-                onChange={(event) =>
-                  updatePreference(
-                    'avoidedIngredients',
-                    event.target.value,
-                    'preferences',
-                    400,
-                  )
-                }
-              />
-            </div>
+            </fieldset>
 
             <fieldset className="settings-fieldset settings-fieldset--plain">
               <legend>{t('settings.seasoningMode')}</legend>

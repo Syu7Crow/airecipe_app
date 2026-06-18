@@ -9,6 +9,16 @@ export class ApiError extends Error {
   }
 }
 
+const pendingGetRequests = new Map<string, Promise<unknown>>()
+
+function clearPendingGetRequests(path: string) {
+  for (const key of pendingGetRequests.keys()) {
+    if (key.startsWith(`${path}|`)) {
+      pendingGetRequests.delete(key)
+    }
+  }
+}
+
 export async function readJson<T>(response: Response): Promise<T> {
   let payload: ApiResponse<T>
 
@@ -56,6 +66,7 @@ export async function patchJson<T>(
   body: unknown,
   options: { credentials?: RequestCredentials } = {},
 ): Promise<T> {
+  clearPendingGetRequests(path)
   const response = await fetch(path, {
     method: 'PATCH',
     credentials: options.credentials ?? 'same-origin',
@@ -64,18 +75,42 @@ export async function patchJson<T>(
     },
     body: JSON.stringify(body),
   })
-  return readJson<T>(response)
+  try {
+    return await readJson<T>(response)
+  } finally {
+    clearPendingGetRequests(path)
+  }
 }
 
 export async function getJson<T>(
   path: string,
   options: { credentials?: RequestCredentials; cache?: RequestCache } = {},
 ): Promise<T> {
-  const response = await fetch(path, {
-    credentials: options.credentials ?? 'same-origin',
-    cache: options.cache ?? 'no-store',
-  })
-  return readJson<T>(response)
+  const credentials = options.credentials ?? 'same-origin'
+  const cache = options.cache ?? 'no-store'
+  const requestKey = `${path}|${credentials}|${cache}`
+  const pendingRequest = pendingGetRequests.get(requestKey) as
+    | Promise<T>
+    | undefined
+
+  if (pendingRequest) {
+    return pendingRequest
+  }
+
+  const request = fetch(path, {
+    credentials,
+    cache,
+  }).then((response) => readJson<T>(response))
+
+  pendingGetRequests.set(requestKey, request)
+
+  try {
+    return await request
+  } finally {
+    if (pendingGetRequests.get(requestKey) === request) {
+      pendingGetRequests.delete(requestKey)
+    }
+  }
 }
 
 export async function deleteJson<T>(

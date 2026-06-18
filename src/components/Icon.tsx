@@ -39,6 +39,25 @@ const iconPaths: Record<IconName, string[]> = {
   message: ['M5 6.5h14v9H9l-4 3v-12z', 'M8 10h8M8 13h5'],
   plus: ['M12 5v14M5 12h14'],
   arrow: ['M5 12h14M13 6l6 6-6 6'],
+  volume: [
+    'M4.5 14.5h3L12 18V6L7.5 9.5h-3v5z',
+    'M15 9.5a4 4 0 0 1 0 5M17.5 7a7 7 0 0 1 0 10',
+  ],
+  play: ['M8 5.5v13l10-6.5-10-6.5z'],
+  pause: ['M9 5.5v13M15 5.5v13'],
+  stop: ['M7 7h10v10H7z'],
+  mic: [
+    'M12 4a3 3 0 0 0-3 3v5a3 3 0 0 0 6 0V7a3 3 0 0 0-3-3z',
+    'M6.5 11.5a5.5 5.5 0 0 0 11 0M12 17v3M9 20h6',
+  ],
+  skipBack: ['M19 5v14M16 6l-8 6 8 6V6zM5 5v14'],
+  skipForward: ['M5 5v14M8 6l8 6-8 6V6zM19 5v14'],
+  repeat: [
+    'M17 2.75 20.25 6 17 9.25',
+    'M3.75 11V9a3 3 0 0 1 3-3h13.5',
+    'M7 21.25 3.75 18 7 14.75',
+    'M20.25 13v2a3 3 0 0 1-3 3H3.75',
+  ],
 }
 
 export const Icon = memo(function Icon({ name }: { name: IconName }) {

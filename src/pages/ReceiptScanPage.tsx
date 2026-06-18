@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { Icon } from '../components/Icon'
 import { parseReceiptText } from '../lib/receiptApi'
 import { recognizeReceiptImage } from '../lib/receiptOcr'
 import { useI18n } from '../lib/useI18n'
@@ -393,7 +394,10 @@ export function ReceiptScanPage({
             className="secondary-button back-home-button"
             onClick={() => onNavigate?.('home')}
           >
-            {t('common.backHome')}
+            <div style={{ transform: 'scaleX(-1)', display: 'inline-flex' }}>
+              <Icon name="arrow" />
+            </div>
+            <span>{t('common.backHome')}</span>
           </button>
         </div>
       ) : null}
