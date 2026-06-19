@@ -57,6 +57,23 @@ export function RecipeGeneratePage({
   const [isLoading, setIsLoading] = useState(true)
   const [isGenerating, setIsGenerating] = useState(false)
   const toastTimerRef = useRef<number | null>(null)
+  const [prevLoadLanguage, setPrevLoadLanguage] = useState<string | null>(null)
+
+  if (prevLoadLanguage !== language) {
+    setPrevLoadLanguage(language)
+    const cachedGenerate = getCache<{
+      ingredients: Ingredient[]
+      recipes: Recipe[]
+      preferences: UserPreferences
+    }>(`recipe-generate:${language}`)
+    if (cachedGenerate) {
+      setIngredients(cachedGenerate.ingredients)
+      setRecipes(cachedGenerate.recipes)
+      setPreferences(cachedGenerate.preferences)
+      setServings(cachedGenerate.preferences.defaultServings)
+      setIsLoading(false)
+    }
+  }
 
   const visibleIngredients = useMemo(
     () => ingredients.slice(0, 12),
@@ -72,13 +89,6 @@ export function RecipeGeneratePage({
       recipes: Recipe[]
       preferences: UserPreferences
     }>(cacheKey)
-    if (cached) {
-      setIngredients(cached.ingredients)
-      setRecipes(cached.recipes)
-      setPreferences(cached.preferences)
-      setServings(cached.preferences.defaultServings)
-      setIsLoading(false)
-    }
 
     async function loadPageData() {
       setIsLoading(!cached)
@@ -122,7 +132,7 @@ export function RecipeGeneratePage({
     return () => {
       isMounted = false
     }
-  }, [language])
+  }, [language, t])
 
   useEffect(() => {
     function handlePreferencesUpdated(event: Event) {

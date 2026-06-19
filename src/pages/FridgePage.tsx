@@ -312,6 +312,18 @@ export function FridgePage({
   const [formError, setFormError] = useState('')
   const [toastMessage, setToastMessage] = useState('')
   const toastTimerRef = useRef<number | null>(null)
+  const [prevLoadLanguage, setPrevLoadLanguage] = useState<string | null>(null)
+
+  if (prevLoadLanguage !== language) {
+    setPrevLoadLanguage(language)
+    const cachedInventory = getCache<Ingredient[]>(`inventory:${language}`)
+    if (cachedInventory) {
+      setIngredients(cachedInventory)
+      setError(null)
+      setLoading(false)
+    }
+  }
+
   const summary = useMemo(() => buildSummary(ingredients), [ingredients])
   const aggregatedIngredients = useMemo(
     () => aggregateIngredients(ingredients, language),
@@ -554,13 +566,6 @@ export function FridgePage({
     let isMounted = true
     const cacheKey = `inventory:${language}`
 
-    const cached = getCache<Ingredient[]>(cacheKey)
-    if (cached) {
-      setIngredients(cached)
-      setError(null)
-      setLoading(false)
-    }
-
     fetchInventory(language)
       .then((result) => {
         if (isMounted) {
@@ -584,7 +589,7 @@ export function FridgePage({
     return () => {
       isMounted = false
     }
-  }, [language])
+  }, [language, t])
 
   function openEditForm(ingredient: Ingredient) {
     setFormState(buildFormFromIngredient(ingredient))

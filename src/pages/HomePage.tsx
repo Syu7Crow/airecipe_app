@@ -139,6 +139,32 @@ export function HomePage({
   const [preferences, setPreferences] =
     useState<UserPreferences>(defaultPreferences)
   const toastTimerRef = useRef<number | null>(null)
+  const [prevLoadLanguage, setPrevLoadLanguage] = useState<string | null>(null)
+
+  if (prevLoadLanguage !== language) {
+    setPrevLoadLanguage(language)
+    const cachedHome = getCache<HomeData>(`home:${language}`)
+    if (cachedHome) {
+      setIngredients(cachedHome.ingredients)
+      setRecipes(cachedHome.recipes)
+      setPreferences(cachedHome.preferences)
+      setLoadingState({
+        ingredients: false,
+        recipes: false,
+        preferences: false,
+      })
+    } else {
+      setIngredients([])
+      setRecipes([])
+      setPreferences(defaultPreferences)
+      setLoadingState({
+        ingredients: true,
+        recipes: true,
+        preferences: true,
+      })
+    }
+  }
+
   const secondaryFeatures = useMemo(() => getSecondaryFeatures(t), [t])
   const currentSummaryItems = useMemo(
     () => buildSummaryItems(ingredients, recipes, preferences, t, loadingState),
@@ -174,26 +200,6 @@ export function HomePage({
     let nextIngredients = cached?.ingredients ?? []
     let nextRecipes = cached?.recipes ?? []
     let nextPreferences = cached?.preferences ?? defaultPreferences
-
-    if (cached) {
-      setIngredients(cached.ingredients)
-      setRecipes(cached.recipes)
-      setPreferences(cached.preferences)
-      setLoadingState({
-        ingredients: false,
-        recipes: false,
-        preferences: false,
-      })
-    } else {
-      setIngredients([])
-      setRecipes([])
-      setPreferences(defaultPreferences)
-      setLoadingState({
-        ingredients: true,
-        recipes: true,
-        preferences: true,
-      })
-    }
 
     const inventoryRequest = fetchInventory(language)
       .then((result) => {
@@ -279,7 +285,7 @@ export function HomePage({
     return () => {
       isMounted = false
     }
-  }, [language])
+  }, [language, t])
 
   useEffect(() => {
     let isMounted = true

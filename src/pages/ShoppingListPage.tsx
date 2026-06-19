@@ -404,17 +404,21 @@ export function ShoppingListPage({
     const gram = manualForm.gram
       ? Math.max(1, Math.round(Number(manualForm.gram) || 1))
       : null
-    const item: Omit<ShoppingItem, 'checked'> = {
-      id: `manual-${Date.now()}`,
-      name,
-      category: manualForm.category.trim() || inferCategory(name),
-      quantity,
-      gram,
-      isManual: true,
-      memo: manualForm.memo.trim() || undefined,
-    }
+    const category = manualForm.category.trim() || inferCategory(name)
+    const memo = manualForm.memo.trim() || undefined
 
-    setManualItems((current) => [item, ...current])
+    setManualItems((current) => [
+      {
+        id: `manual-${Date.now()}`,
+        name,
+        category,
+        quantity,
+        gram,
+        isManual: true,
+        memo,
+      },
+      ...current,
+    ])
     setManualForm(emptyManualShoppingForm)
     showToast(t('shopping.addSuccess'))
   }
