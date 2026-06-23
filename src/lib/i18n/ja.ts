@@ -601,6 +601,9 @@ export const jaMessages = {
   'shopping.selectedItemsText': '{count} 件を選択中',
   'shopping.moveToFridgeBtn': '買い物リストに追加',
   'shopping.moveSuccessAlert': '{count}件を買い物リストに追加しました',
+  'shopping.recipeCandidateTitle': '\u30ec\u30b7\u30d4\u306e\u98df\u6750\u5019\u88dc',
+  'shopping.recipeCandidateDescription':
+    '\u9078\u3093\u3060\u30ec\u30b7\u30d4\u306e\u98df\u6750\u3067\u3059\u3002\u78ba\u8a8d\u3057\u3066\u304b\u3089\u8cb7\u3044\u7269\u30e1\u30e2\u306b\u8ffd\u52a0\u3067\u304d\u307e\u3059\u3002',
   'shopping.addNewTitle': '新しく買うものを追加',
   'shopping.namePlaceholder': '食材名（例: キャベツ）',
   'shopping.categoryPlaceholder': '未入力なら自動推定',

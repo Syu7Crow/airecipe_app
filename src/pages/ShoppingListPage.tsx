@@ -2,7 +2,6 @@ import {
   useEffect,
   useState,
   useMemo,
-  useDeferredValue,
   useRef,
   type FormEvent,
 } from 'react'
@@ -24,6 +23,7 @@ import type {
   AppDestination,
   Ingredient,
   Recipe,
+  ShoppingList,
   ShoppingListSummary,
 } from '../types/ui'
 
@@ -35,7 +35,6 @@ type ShoppingItem = {
   gram: number | null     
   isManual: boolean       
   memo?: string           
-  checked: boolean        
 }
 
 type ManualShoppingForm = {
@@ -54,48 +53,91 @@ const emptyManualShoppingForm: ManualShoppingForm = {
   memo: '',
 }
 
+const CATEGORY_MEAT_EGG_FISH = 'meatEggFish'
+const CATEGORY_VEGETABLE = 'vegetable'
+const CATEGORY_DAIRY = 'dairy'
+const CATEGORY_PROCESSED = 'processed'
+const CATEGORY_OTHER = 'other'
+
+const meatEggFishWords = [
+  '\u8089',
+  '\u9d8f',
+  '\u8c5a',
+  '\u725b',
+  '\u9b5a',
+  '\u5375',
+  '\u305f\u307e\u3054',
+  '\u30cf\u30e0',
+  '\u30bd\u30fc\u30bb\u30fc\u30b8',
+  'sausage',
+  'chicken',
+  'pork',
+  'beef',
+  'fish',
+  'egg',
+]
+
+const vegetableWords = [
+  '\u91ce\u83dc',
+  '\u7389\u306d\u304e',
+  '\u7389\u8471',
+  '\u306b\u3093\u3058\u3093',
+  '\u4eba\u53c2',
+  '\u30ad\u30e3\u30d9\u30c4',
+  '\u30ec\u30bf\u30b9',
+  '\u30c8\u30de\u30c8',
+  '\u304d\u306e\u3053',
+  '\u306d\u304e',
+  '\u3058\u3083\u304c\u3044\u3082',
+  '\u30d4\u30fc\u30de\u30f3',
+  'vegetable',
+]
+
+const dairyWords = [
+  '\u725b\u4e73',
+  '\u30c1\u30fc\u30ba',
+  '\u30d0\u30bf\u30fc',
+  '\u30e8\u30fc\u30b0\u30eb\u30c8',
+  'milk',
+  'cheese',
+  'butter',
+  'yogurt',
+]
+
+const processedWords = [
+  '\u52a0\u5de5',
+  '\u7c73',
+  '\u30d1\u30f3',
+  '\u30d1\u30b9\u30bf',
+  '\u9eba',
+  '\u8c46\u8150',
+  '\u7f36',
+  'processed',
+  'rice',
+  'bread',
+  'pasta',
+]
+
 function inferCategory(name: string): string {
   const n = name.toLowerCase()
-  if (
-    n.includes('肉') || n.includes('豚') || n.includes('牛') || n.includes('鶏') ||
-    n.includes('卵') || n.includes('魚') || n.includes('鮭') || n.includes('サケ') ||
-    n.includes('ソーセージ') || n.includes('ベーコン') || n.includes('ハム') ||
-    n.includes('貝') || n.includes('エビ') || n.includes('カニ')
-  ) {
-    return '肉・卵・魚'
+  if (meatEggFishWords.some((word) => n.includes(word))) {
+    return CATEGORY_MEAT_EGG_FISH
   }
-  if (
-    n.includes('キャベツ') || n.includes('レタス') || n.includes('トマト') ||
-    n.includes('人参') || n.includes('にんじん') || n.includes('じゃがいも') ||
-    n.includes('玉ねぎ') || n.includes('たまねぎ') || n.includes('ナス') ||
-    n.includes('ピーマン') || n.includes('大根') || n.includes('だいこん') ||
-    n.includes('白菜') || n.includes('はくさい') || n.includes('小松菜') ||
-    n.includes('ねぎ') || n.includes('ネギ') || n.includes('きのこ') ||
-    n.includes('しいたけ') || n.includes('しめじ') || n.includes('えのき') ||
-    n.includes('野菜') || n.includes('ほうれん草')
-  ) {
-    return '野菜'
+  if (vegetableWords.some((word) => n.includes(word))) {
+    return CATEGORY_VEGETABLE
   }
-  if (
-    n.includes('乳') || n.includes('ミルク') || n.includes('チーズ') ||
-    n.includes('バター') || n.includes('ヨーグルト') || n.includes('クリーム')
-  ) {
-    return '乳製品'
+  if (dairyWords.some((word) => n.includes(word))) {
+    return CATEGORY_DAIRY
   }
-  if (
-    n.includes('加工') || n.includes('缶') || n.includes('豆腐') ||
-    n.includes('納豆') || n.includes('ちくわ') || n.includes('キムチ') ||
-    n.includes('パスタ') || n.includes('米') || n.includes('パン') ||
-    n.includes('麺') || n.includes('うどん') || n.includes('そば')
-  ) {
-    return '加工品'
+  if (processedWords.some((word) => n.includes(word))) {
+    return CATEGORY_PROCESSED
   }
-  return 'その他'
+  return CATEGORY_OTHER
 }
 
 function compareCategoryNames(left: string, right: string, language: string) {
-  if (left === 'その他' && right !== ' savory') return 1
-  if (right === 'その他' && left !== 'その他') return -1
+  if (left === CATEGORY_OTHER && right !== CATEGORY_OTHER) return 1
+  if (right === CATEGORY_OTHER && left !== CATEGORY_OTHER) return -1
   return left.localeCompare(right, language)
 }
 
@@ -127,21 +169,14 @@ export function ShoppingListPage({
   const [isRecipeListOpen, setIsRecipeListOpen] = useState(true)
   const [visibleRecipeCount, setVisibleRecipeCount] = useState(RECIPE_PAGE_SIZE)
 
-  const [manualItems, setManualItems] = useState<Omit<ShoppingItem, 'checked'>[]>([])
+  const [manualItems, setManualItems] = useState<ShoppingItem[]>([])
   const [savedLists, setSavedLists] = useState<ShoppingListSummary[]>([])
+  const [selectedSavedList, setSelectedSavedList] = useState<ShoppingList | null>(null)
   const [isSaveModalOpen, setIsSaveModalOpen] = useState(false)
   const [isLoadModalOpen, setIsLoadModalOpen] = useState(false)
   const [saveListName, setSaveListName] = useState('')
   const [isShoppingListLoading, setIsShoppingListLoading] = useState(false)
 
-  const [searchQuery, setSearchQuery] = useState('')
-  const deferredSearchQuery = useDeferredValue(searchQuery)
-  const [selectedCategories, setSelectedCategories] = useState<Set<string>>(() => new Set())
-  const [isFilterOpen, setIsFilterOpen] = useState(false)
-
-  const [isCategoryDropdownOpen, setIsCategoryDropdownOpen] = useState(false)
-
-  const [checkedItemIds, setCheckedItemIds] = useState<Set<string>>(() => new Set())
   const [isSaving, setIsSaving] = useState(false)
   const [manualForm, setManualForm] = useState<ManualShoppingForm>(
     emptyManualShoppingForm,
@@ -232,7 +267,7 @@ export function ShoppingListPage({
     }
   }, [])
 
-  const shoppingItems = useMemo(() => {
+  const recipeCandidateItems = useMemo(() => {
     const requiredMap = new Map<string, { name: string; g: number; pcs: number; recipes: Set<string> }>()
     const manualItemKeys = new Set(
       manualItems.map((item) => getShoppingItemKey(item.name)),
@@ -263,10 +298,14 @@ export function ShoppingListPage({
     const inventoryMap = new Map<string, { g: number; pcs: number; category: string }>()
     fridgeIngredients.forEach((ing) => {
       const nameKey = ing.name.trim().toLowerCase()
-      const existing = inventoryMap.get(nameKey) || { g: 0, pcs: 0, category: ing.category || 'その他' }
+      const existing = inventoryMap.get(nameKey) || {
+        g: 0,
+        pcs: 0,
+        category: ing.category || CATEGORY_OTHER,
+      }
       existing.g += ing.gram || 0
       existing.pcs += ing.quantity || 0
-      if (ing.category && ing.category !== 'その他') {
+      if (ing.category && ing.category !== CATEGORY_OTHER) {
         existing.category = ing.category
       }
       inventoryMap.set(nameKey, existing)
@@ -274,14 +313,11 @@ export function ShoppingListPage({
 
     const autoGenerated: ShoppingItem[] = []
     requiredMap.forEach((req, nameKey) => {
-      if (manualItemKeys.has(nameKey)) {
-        return
-      }
+      if (manualItemKeys.has(nameKey)) return
 
       const inv = inventoryMap.get(nameKey)
       const invG = inv ? inv.g : 0
       const invPcs = inv ? inv.pcs : 0
-
       const lackG = Math.max(0, req.g - invG)
       const lackPcs = Math.max(0, req.pcs - invPcs)
       const displayG = lackG > 0 ? lackG : req.g
@@ -297,61 +333,53 @@ export function ShoppingListPage({
         gram: displayG > 0 ? Math.ceil(displayG) : null,
         isManual: false,
         memo: `${t('recipe.ingredientsEyebrow')}: ${memo}`,
-        checked: checkedItemIds.has(`auto-${nameKey}`),
       })
     })
 
-    return [
-      ...autoGenerated,
-      ...manualItems.map((item) => ({
-        ...item,
-        checked: checkedItemIds.has(item.id),
-      })),
-    ]
-  }, [recipes, selectedRecipeIds, fridgeIngredients, manualItems, checkedItemIds, t])
+    return autoGenerated
+  }, [recipes, selectedRecipeIds, fridgeIngredients, manualItems, t])
+
+  const shoppingItems = manualItems
 
   const availableCategories = useMemo(() => {
-    const existing = shoppingItems.map((item) => item.category?.trim() || 'その他')
-    return Array.from(new Set(existing))
-      .toSorted((left, right) => compareCategoryNames(left, right, language))
+    const existing = shoppingItems.map((item) => item.category?.trim() || CATEGORY_OTHER)
+    return Array.from(new Set(existing)).toSorted((left, right) =>
+      compareCategoryNames(left, right, language),
+    )
   }, [shoppingItems, language])
 
-  const filteredShoppingItems = useMemo(() => {
-    const search = deferredSearchQuery.trim().toLowerCase()
-    const isCategoryAll = selectedCategories.size === 0
-
-    return shoppingItems.filter((item) => {
-      if (!isCategoryAll && !selectedCategories.has(item.category)) {
-        return false
-      }
-      if (
-        search &&
-        !item.name.toLowerCase().includes(search) &&
-        !item.category.toLowerCase().includes(search) &&
-        !(item.memo ?? '').toLowerCase().includes(search)
-      ) {
-        return false
-      }
-      return true
-    })
-  }, [shoppingItems, deferredSearchQuery, selectedCategories])
-
   const groupedItems = useMemo(() => {
-    return filteredShoppingItems.reduce(
+    return shoppingItems.reduce(
       (groups, item) => {
-        const cat = item.category || 'その他'
+        const cat = item.category || CATEGORY_OTHER
         groups[cat] ??= []
         groups[cat].push(item)
         return groups
       },
       {} as Record<string, ShoppingItem[]>,
     )
-  }, [filteredShoppingItems])
+  }, [shoppingItems])
 
-  const isFilterActive = selectedCategories.size > 0 || searchQuery.trim() !== ''
-  const selectedCandidateCount = shoppingItems.filter(
-    (item) => item.checked && !item.isManual,
-  ).length
+  const recipeCandidateCategories = useMemo(() => {
+    const existing = recipeCandidateItems.map(
+      (item) => item.category?.trim() || CATEGORY_OTHER,
+    )
+    return Array.from(new Set(existing)).toSorted((left, right) =>
+      compareCategoryNames(left, right, language),
+    )
+  }, [recipeCandidateItems, language])
+
+  const groupedRecipeCandidateItems = useMemo(() => {
+    return recipeCandidateItems.reduce(
+      (groups, item) => {
+        const cat = item.category || CATEGORY_OTHER
+        groups[cat] ??= []
+        groups[cat].push(item)
+        return groups
+      },
+      {} as Record<string, ShoppingItem[]>,
+    )
+  }, [recipeCandidateItems])
 
   function toggleRecipeSelection(recipeId: string) {
     setSelectedRecipeIds((current) => {
@@ -365,74 +393,8 @@ export function ShoppingListPage({
     })
   }
 
-  function toggleShoppingItem(itemId: string) {
-    setCheckedItemIds((current) => {
-      const next = new Set(current)
-      if (next.has(itemId)) {
-        next.delete(itemId)
-      } else {
-        next.add(itemId)
-      }
-      return next
-    })
-  }
-
-  function updateManualForm<K extends keyof ManualShoppingForm>(
-    key: K,
-    value: ManualShoppingForm[K],
-  ) {
-    setManualForm((current) => ({
-      ...current,
-      [key]: value,
-    }))
-  }
-
-  function handleAddManualItem(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault()
-
-    const name = manualForm.name.trim()
-
-    if (!name) {
-      showToast(t('shopping.nameRequired'))
-      return
-    }
-
-    const quantity = manualForm.quantity
-      ? Math.max(1, Math.round(Number(manualForm.quantity) || 1))
-      : null
-    const gram = manualForm.gram
-      ? Math.max(1, Math.round(Number(manualForm.gram) || 1))
-      : null
-    const category = manualForm.category.trim() || inferCategory(name)
-    const memo = manualForm.memo.trim() || undefined
-
-    setManualItems((current) => [
-      {
-        id: `manual-${Date.now()}`,
-        name,
-        category,
-        quantity,
-        gram,
-        isManual: true,
-        memo,
-      },
-      ...current,
-    ])
-    setManualForm(emptyManualShoppingForm)
-    showToast(t('shopping.addSuccess'))
-  }
-
-  function handleRemoveManualItem(itemId: string) {
-    setManualItems((current) => current.filter((item) => item.id !== itemId))
-    setCheckedItemIds((current) => {
-      const next = new Set(current)
-      next.delete(itemId)
-      return next
-    })
-  }
-
-  function handleAddCheckedToShoppingList() {
-    const itemsToAdd = shoppingItems.filter((item) => item.checked && !item.isManual)
+  function handleAddRecipeCandidatesToShoppingList() {
+    const itemsToAdd = recipeCandidateItems
     if (itemsToAdd.length === 0) {
       showToast(t('shopping.addSelectedNone'))
       return
@@ -459,32 +421,47 @@ export function ShoppingListPage({
       return [...nextItems, ...current]
     })
 
-    setCheckedItemIds((current) => {
-      const next = new Set(current)
-      itemsToAdd.forEach((item) => next.delete(item.id))
-      return next
-    })
-
     showToast(t('shopping.moveSuccessAlert', { count: itemsToAdd.length }))
     setIsSaving(false)
   }
 
-  function toggleCategoryFilter(category: string) {
-    setSelectedCategories((current) => {
-      const next = new Set(current)
-      if (next.has(category)) {
-        next.delete(category)
-      } else {
-        next.add(category)
-      }
-      return next
-    })
+  function updateManualForm(field: keyof ManualShoppingForm, value: string) {
+    setManualForm((current) => ({
+      ...current,
+      [field]: value,
+    }))
   }
 
-  function clearFilters() {
-    setSelectedCategories(new Set())
-    setSearchQuery('')
-    setIsCategoryDropdownOpen(false)
+  function handleAddManualItem(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+
+    const name = manualForm.name.trim()
+    if (!name) {
+      showToast(t('shopping.nameRequired'))
+      return
+    }
+
+    const quantity = manualForm.quantity ? Number(manualForm.quantity) : null
+    const gram = manualForm.gram ? Number(manualForm.gram) : null
+
+    setManualItems((current) => [
+      {
+        id: `manual-${Date.now()}`,
+        name,
+        category: manualForm.category.trim() || inferCategory(name),
+        quantity: quantity && quantity > 0 ? quantity : null,
+        gram: gram && gram > 0 ? gram : null,
+        isManual: true,
+        memo: manualForm.memo.trim() || undefined,
+      },
+      ...current,
+    ])
+    setManualForm(emptyManualShoppingForm)
+    showToast(t('shopping.addSuccess'))
+  }
+
+  function handleRemoveManualItem(itemId: string) {
+    setManualItems((current) => current.filter((item) => item.id !== itemId))
   }
 
   async function handleSaveShoppingList(event: FormEvent<HTMLFormElement>) {
@@ -512,7 +489,7 @@ export function ShoppingListPage({
           quantity: item.quantity,
           gram: item.gram,
           memo: item.memo ?? null,
-          checked: item.checked,
+          checked: false,
         })),
       })
       setSavedLists((current) =>
@@ -532,30 +509,12 @@ export function ShoppingListPage({
     }
   }
 
-  async function handleLoadShoppingList(shoppingListId: string) {
+  async function handleViewShoppingList(shoppingListId: string) {
     setIsShoppingListLoading(true)
 
     try {
       const result = await fetchShoppingList(shoppingListId)
-      const loadedItems = result.shoppingList.items.map((item, index) => ({
-        id: item.itemId ?? `manual-${Date.now()}-${index}`,
-        name: item.name,
-        category: item.category,
-        quantity: item.quantity,
-        gram: item.gram,
-        isManual: true,
-        memo: item.memo ?? undefined,
-      }))
-      setManualItems(loadedItems)
-      setCheckedItemIds(
-        new Set(
-          result.shoppingList.items
-            .filter((item) => item.checked && item.itemId)
-            .map((item) => item.itemId as string),
-        ),
-      )
-      setIsLoadModalOpen(false)
-      showToast(t('shopping.loadSuccess'))
+      setSelectedSavedList(result.shoppingList)
     } catch (error) {
       showToast(error instanceof Error ? error.message : t('shopping.loadFailed'))
     } finally {
@@ -569,6 +528,9 @@ export function ShoppingListPage({
     try {
       const result = await deleteShoppingList(shoppingListId)
       setSavedLists(result.shoppingLists)
+      setSelectedSavedList((current) =>
+        current?.shoppingListId === shoppingListId ? null : current,
+      )
       showToast(t('shopping.deleteSuccess'))
     } catch (error) {
       showToast(error instanceof Error ? error.message : t('shopping.deleteFailed'))
@@ -579,21 +541,20 @@ export function ShoppingListPage({
 
   function getCategoryLabel(category: string) {
     switch (category) {
-      case '肉・卵・魚':
+      case CATEGORY_MEAT_EGG_FISH:
         return t('category.meatEggFish')
-      case '野菜':
+      case CATEGORY_VEGETABLE:
         return t('category.vegetable')
-      case '乳製品':
+      case CATEGORY_DAIRY:
         return t('category.dairy')
-      case '加工品':
+      case CATEGORY_PROCESSED:
         return t('category.processed')
-      case 'その他':
+      case CATEGORY_OTHER:
         return t('category.other')
       default:
         return category
     }
   }
-
   if (loading) {
     return (
       <main className="fridge-container shopping-page">
@@ -742,7 +703,7 @@ export function ShoppingListPage({
         >
           <span>{t('recipeGenerate.title')} {selectedRecipeIds.size} {t('shopping.selectedRecipeText')}</span>
           <span className={`shopping-section-toggle__icon ${isRecipeListOpen ? 'is-open' : ''}`}>
-            ▶
+            <Icon name="arrow" />
           </span>
         </button>
         {isRecipeListOpen && (
@@ -801,96 +762,73 @@ export function ShoppingListPage({
         )}
       </section>
 
-      <section className="fridge-filter-panel shopping-filter-panel" aria-label={t('fridge.filter.title')}>
-        <div className="fridge-filter-bar">
-          <label className="fridge-search-field">
-            <span>{t('fridge.filter.search')}</span>
-            <input
-              type="search"
-              placeholder={t('shopping.searchPlaceholder')}
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-          </label>
-          <button
-            type="button"
-            className={`secondary-button fridge-filter-toggle ${isFilterActive ? 'is-active' : ''}`}
-            aria-expanded={isFilterOpen}
-            onClick={() => setIsFilterOpen((current) => !current)}
-          >
-            {t('fridge.filter.open')}
-          </button>
-        </div>
-
-        {isFilterOpen ? (
-          <div className="fridge-filter-options">
-            <fieldset className="fridge-filter-group">
-              <legend>{t('fridge.filter.category')}</legend>
-              <div className="fridge-category-dropdown">
-                <button
-                  type="button"
-                  className="secondary-button fridge-category-dropdown__trigger"
-                  aria-expanded={isCategoryDropdownOpen}
-                  onClick={() =>
-                    setIsCategoryDropdownOpen((current) => !current)
-                  }
-                >
-                  <span>
-                    {selectedCategories.size === 0
-                      ? t('fridge.filter.categoryAll')
-                      : t('fridge.filter.categorySelected', {
-                          count: selectedCategories.size,
-                        })}
-                  </span>
-                </button>
-                {isCategoryDropdownOpen ? (
-                  <div className="fridge-category-dropdown__menu">
-                    <p>{t('fridge.filter.categoryHint')}</p>
-                    {availableCategories.map((category) => (
-                      <label key={category} className="fridge-category-option">
-                        <input
-                          type="checkbox"
-                          checked={selectedCategories.has(category)}
-                          onChange={() => toggleCategoryFilter(category)}
-                        />
-                        <span>{getCategoryLabel(category)}</span>
-                      </label>
-                    ))}
-                  </div>
-                ) : null}
-              </div>
-            </fieldset>
-
+      {recipeCandidateItems.length > 0 && (
+        <section className="shopping-panel shopping-candidate-panel">
+          <div className="section-heading shopping-list-heading">
+            <div>
+              <p className="eyebrow">{t('recipe.ingredientsEyebrow')}</p>
+              <h2>{t('shopping.recipeCandidateTitle')}</h2>
+              <p className="settings-section__description shopping-list-heading__description">
+                {t('shopping.recipeCandidateDescription')}
+              </p>
+            </div>
             <button
               type="button"
-              className="secondary-button"
-              onClick={clearFilters}
-              disabled={!isFilterActive}
+              className="primary-button"
+              disabled={isSaving}
+              onClick={handleAddRecipeCandidatesToShoppingList}
             >
-              {t('fridge.filter.clear')}
+              {isSaving ? t('common.saving') : t('shopping.moveToFridgeBtn')}
             </button>
           </div>
-        ) : null}
-      </section>
+          <div className="fridge-tables shopping-candidate-tables">
+            {recipeCandidateCategories.map((category) => {
+              const items = groupedRecipeCandidateItems[category]
+              if (!items || items.length === 0) return null
 
-      {selectedCandidateCount > 0 && (
-        <div
-          className="fridge-bulk-actions shopping-bulk-actions"
-        >
-          <span>
-            {t('shopping.selectedItemsText', { count: selectedCandidateCount })}
-          </span>
-          <button
-            type="button"
-            className="primary-button"
-            disabled={isSaving}
-            onClick={handleAddCheckedToShoppingList}
-          >
-            {isSaving ? t('common.saving') : t('shopping.moveToFridgeBtn')}
-          </button>
-        </div>
+              return (
+                <div key={category} className="category-table-wrapper">
+                  <h3 className="category-title">{getCategoryLabel(category)}</h3>
+                  <div className="table-container">
+                    <table className="fridge-table shopping-table">
+                      <thead>
+                        <tr>
+                          <th>{t('fridge.table.ingredient')}</th>
+                          <th>{t('fridge.form.quantity')}</th>
+                          <th>{t('fridge.form.gram')}</th>
+                          <th>{t('fridge.table.memo')}</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {items.map((item) => (
+                          <tr key={item.id}>
+                            <td className="ingredient-name-cell">
+                              <span className="ingredient-name">{item.name}</span>
+                            </td>
+                            <td>
+                              {item.quantity
+                                ? t('shopping.amountText', { amount: item.quantity })
+                                : '-'}
+                            </td>
+                            <td>
+                              {item.gram
+                                ? t('shopping.weightText', { weight: item.gram })
+                                : '-'}
+                            </td>
+                            <td className="shopping-table__memo">
+                              {item.memo || '-'}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </section>
       )}
-
       <div className="section-heading shopping-list-heading">
         <div>
           <p className="eyebrow">{t('shopping.memoEyebrow')}</p>
@@ -921,10 +859,6 @@ export function ShoppingListPage({
         <div className="fridge-error">
           <p>{t('shopping.empty')}</p>
         </div>
-      ) : filteredShoppingItems.length === 0 ? (
-        <div className="fridge-error">
-          <p>{t('fridge.filter.noResults')}</p>
-        </div>
       ) : (
         <div className="fridge-tables">
           {availableCategories.map((category) => {
@@ -938,7 +872,6 @@ export function ShoppingListPage({
                   <table className="fridge-table shopping-table">
                     <thead>
                       <tr>
-                        <th aria-label={t('history.selection.item')}></th>
                         <th>{t('fridge.table.ingredient')}</th>
                         <th>{t('fridge.form.quantity')}</th>
                         <th>{t('fridge.form.gram')}</th>
@@ -949,18 +882,7 @@ export function ShoppingListPage({
                       {items.map((item) => (
                         <tr
                           key={item.id}
-                          className={item.checked ? 'near-expiration-row' : ''}
-                          onClick={() => toggleShoppingItem(item.id)}
                         >
-                          <td className="shopping-table__check">
-                            <input
-                              type="checkbox"
-                              aria-label={t('fridge.selection.selectAria', { name: item.name })}
-                              checked={item.checked}
-                              onClick={(event) => event.stopPropagation()}
-                              onChange={() => toggleShoppingItem(item.id)}
-                            />
-                          </td>
                           <td className="ingredient-name-cell">
                             <span className="ingredient-name">{item.name}</span>
                             {item.isManual && (
@@ -1055,6 +977,7 @@ export function ShoppingListPage({
           onClick={(event) => {
             if (event.target === event.currentTarget) {
               setIsLoadModalOpen(false)
+              setSelectedSavedList(null)
             }
           }}
         >
@@ -1071,7 +994,7 @@ export function ShoppingListPage({
                     <button
                       type="button"
                       className="shopping-saved-list__name"
-                      onClick={() => handleLoadShoppingList(list.shoppingListId)}
+                      onClick={() => handleViewShoppingList(list.shoppingListId)}
                       disabled={isShoppingListLoading}
                     >
                       <span>{list.name}</span>
@@ -1091,11 +1014,39 @@ export function ShoppingListPage({
                 ))}
               </ul>
             )}
+            {selectedSavedList ? (
+              <div className="shopping-saved-detail">
+                <div className="section-heading">
+                  <div>
+                    <p className="eyebrow">{t('shopping.memoEyebrow')}</p>
+                    <h3>{selectedSavedList.name}</h3>
+                  </div>
+                  <span>{t('shopping.itemCount', { count: selectedSavedList.itemCount })}</span>
+                </div>
+                <ul className="shopping-saved-detail__items">
+                  {selectedSavedList.items.map((item) => (
+                    <li key={item.itemId ?? `${selectedSavedList.shoppingListId}-${item.name}`}>
+                      <strong>{item.name}</strong>
+                      <span>
+                        {[
+                          item.quantity ? t('shopping.amountText', { amount: item.quantity }) : '',
+                          item.gram ? t('shopping.weightText', { weight: item.gram }) : '',
+                          item.memo ?? '',
+                        ].filter(Boolean).join(' / ') || '-'}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
             <div className="modal-actions">
               <button
                 type="button"
                 className="secondary-button"
-                onClick={() => setIsLoadModalOpen(false)}
+                onClick={() => {
+                  setIsLoadModalOpen(false)
+                  setSelectedSavedList(null)
+                }}
                 disabled={isShoppingListLoading}
               >
                 {t('common.close')}

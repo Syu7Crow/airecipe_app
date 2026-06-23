@@ -778,7 +778,7 @@ async function handleUserFridge(userId, response) {
     const ingredients = inventory.map((item, index) => ({
       ingredient_id: item.inventoryId ?? item.ingredientId ?? index + 1,
       ingredient_name: item.name,
-      category: item.category ?? 'そ�E仁E,
+      category: item.category ?? 'other',
       amount: item.amount,
       is_opened: false,
       best_before_date: null,
@@ -1104,15 +1104,10 @@ async function handleRecipeGeneration(request, response, userId) {
       : 500
     const message =
       error instanceof Error && error.message === 'Inventory is empty'
-        ? body?.language === 'en'
-          ? 'Add ingredients before generating recipes.'
-          : body?.language === 'fr'
-            ? 'Ajoutez des ingrédients avant de générer des recettes.'
-            : '食材を登録してからレシピを生�Eしてください、E
+        ? 'Add ingredients before generating recipes.'
         : error instanceof Error
           ? error.message
           : 'Recipe generation failed'
-
     sendJson(response, statusCode, {
       ok: false,
       message,

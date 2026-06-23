@@ -623,6 +623,9 @@ export const frMessages: Record<MessageKey, string> = {
   'shopping.selectedItemsText': '{count} sélectionné(s)',
   'shopping.moveToFridgeBtn': 'Ajouter à la liste de courses',
   'shopping.moveSuccessAlert': '{count} article(s) ajouté(s) à la liste de courses.',
+  'shopping.recipeCandidateTitle': 'Ingredients des recettes',
+  'shopping.recipeCandidateDescription':
+    'Ces ingredients viennent des recettes selectionnees. Verifiez-les avant de les ajouter au memo de courses.',
   'shopping.addNewTitle': 'Ajouter un article',
   'shopping.namePlaceholder': 'Nom de l\'ingrédient (ex: Chou)',
   'shopping.categoryPlaceholder': 'Auto si vide',

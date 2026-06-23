@@ -612,6 +612,9 @@ export const enMessages: Record<MessageKey, string> = {
   'shopping.selectedItemsText': '{count} selected',
   'shopping.moveToFridgeBtn': 'Add to shopping list',
   'shopping.moveSuccessAlert': 'Added {count} item(s) to the shopping list.',
+  'shopping.recipeCandidateTitle': 'Recipe ingredient candidates',
+  'shopping.recipeCandidateDescription':
+    'These ingredients come from the selected recipes. Review them before adding them to the shopping memo.',
   'shopping.addNewTitle': 'Add New Item',
   'shopping.namePlaceholder': 'Ingredient name (e.g. Cabbage)',
   'shopping.categoryPlaceholder': 'Auto if blank',
