@@ -753,7 +753,7 @@ export function ShoppingListPage({
               </p>
             ) : (
               <>
-                <div className="shopping-recipe-grid card-stagger">
+                <div className="shopping-recipe-grid">
                   {recipes.slice(0, visibleRecipeCount).map((recipe) => {
                     const key = recipe.recipeId || recipe.name
                     if (!key) return null
@@ -789,7 +789,7 @@ export function ShoppingListPage({
                       <span>{t('shopping.showMore', {
                         remaining: recipes.length - visibleRecipeCount,
                       })}</span>
-                      <span style={{ display: 'inline-flex', transform: 'rotate(90deg)' }}>
+                      <span className="shopping-recipe-more__icon">
                         <Icon name="arrow" />
                       </span>
                     </button>
@@ -1010,7 +1010,7 @@ export function ShoppingListPage({
             }
           }}
         >
-          <div className="cook-modal">
+          <div className="cook-modal shopping-modal">
             <h2>{t('shopping.saveListTitle')}</h2>
             <p className="settings-section__description">
               {t('shopping.saveListDescription', { count: shoppingItems.length })}
@@ -1058,7 +1058,7 @@ export function ShoppingListPage({
             }
           }}
         >
-          <div className="cook-modal">
+          <div className="cook-modal shopping-modal">
             <h2>{t('shopping.loadListTitle')}</h2>
             {savedLists.length === 0 ? (
               <p className="settings-section__description">
