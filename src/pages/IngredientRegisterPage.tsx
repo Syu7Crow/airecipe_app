@@ -123,6 +123,47 @@ function extractJsonObjectText(text: string) {
   return null
 }
 
+function inferFoodCategory(name: string, category: unknown) {
+  const value = String(category ?? '').trim()
+
+  if (
+    value === 'meatEggFish' ||
+    value === '肉' ||
+    value === '魚' ||
+    value === '卵' ||
+    value === '肉・魚・卵'
+  ) {
+    return '肉・卵・魚'
+  }
+
+  if (value === 'vegetable') return '野菜'
+  if (value === 'dairy') return '乳製品'
+  if (value === 'processed') return '加工品'
+  if (value === 'other') return 'その他'
+
+  if (['肉・卵・魚', '野菜', '乳製品', '加工品'].includes(value)) {
+    return value
+  }
+
+  if (/(小松菜|玉ねぎ|玉葱|キャベツ|にんじん|人参|じゃがいも|トマト|野菜|ねぎ|白菜|大根|ピーマン|きのこ|しめじ|えのき|しいたけ)/u.test(name)) {
+    return '野菜'
+  }
+
+  if (/(鮭|サーモン|魚|さば|鯖|さんま|まぐろ|刺身|豚|鶏|牛|肉|卵|玉子|たまご|ハム|ベーコン|ウインナー|ソーセージ)/u.test(name)) {
+    return '肉・卵・魚'
+  }
+
+  if (/(牛乳|チーズ|ヨーグルト|バター|乳)/u.test(name)) {
+    return '乳製品'
+  }
+
+  if (/(納豆|豆腐|ちくわ|缶|冷凍|惣菜|加工|米|白米|パン|麺|うどん|そば|パスタ)/u.test(name)) {
+    return '加工品'
+  }
+
+  return 'その他'
+}
+
 function normalizeFoodCandidates(
   payload: unknown,
   recognitionMemo: string,
@@ -146,7 +187,7 @@ function normalizeFoodCandidates(
       const candidate: ReceiptIngredientCandidate = {
         id: `food-image-${index + 1}`,
         name,
-        category: String(source.category ?? 'その他').trim() || 'その他',
+        category: inferFoodCategory(name, source.category),
         quantity: Number.isFinite(quantity) && quantity > 0 ? quantity : null,
         gram: Number.isFinite(gram) && gram > 0 ? Math.round(gram) : null,
         expirationDate: null,

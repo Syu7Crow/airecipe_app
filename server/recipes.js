@@ -191,6 +191,60 @@ function sanitizeOptionalDate(value) {
   return value
 }
 
+function normalizeIngredientNameForMatch(value) {
+  return String(value ?? '')
+    .normalize('NFKC')
+    .replace(/\s+/g, '')
+    .trim()
+    .toLowerCase()
+}
+
+function normalizeInventoryCategory(category, name) {
+  const value = sanitizeText(category)
+
+  if (value === 'meatEggFish' || value === '肉' || value === '魚' || value === '卵') {
+    return '肉・卵・魚'
+  }
+
+  if (value === 'vegetable') {
+    return '野菜'
+  }
+
+  if (value === 'dairy') {
+    return '乳製品'
+  }
+
+  if (value === 'processed') {
+    return '加工品'
+  }
+
+  if (value && value !== 'other' && value !== 'その他') {
+    return value
+  }
+
+  if (/(小松菜|玉ねぎ|玉葱|キャベツ|にんじん|人参|じゃがいも|馬鈴薯|トマト|野菜|ねぎ|白菜|大根|ピーマン|きのこ|しめじ|えのき|しいたけ)/u.test(name)) {
+    return '野菜'
+  }
+
+  if (/(鮭|サーモン|魚|さば|鯖|さんま|まぐろ|刺身|豚|鶏|牛|肉|卵|玉子|たまご|ハム|ベーコン|ウインナー|ソーセージ)/u.test(name)) {
+    return '肉・卵・魚'
+  }
+
+  if (/(牛乳|チーズ|ヨーグルト|バター|乳)/u.test(name)) {
+    return '乳製品'
+  }
+
+  if (/(納豆|豆腐|ちくわ|缶|冷凍|惣菜|加工)/u.test(name)) {
+    return '加工品'
+  }
+
+  if (/(米|白米|パン|麺|うどん|そば|パスタ)/u.test(name)) {
+    return '加工品'
+  }
+
+  return 'その他'
+}
+
 function sanitizeInventoryPayload(payload) {
   const name = sanitizeText(payload?.name)
 
@@ -203,7 +257,7 @@ function sanitizeInventoryPayload(payload) {
 
   return {
     name,
-    category: sanitizeText(payload?.category, 'その他'),
+    category: normalizeInventoryCategory(payload?.category, name),
     quantity: Number.isFinite(quantity) && quantity > 0 ? Math.floor(quantity) : null,
     gram: Number.isFinite(gram) && gram > 0 ? Math.floor(gram) : null,
     expirationDate: sanitizeOptionalDate(payload?.expirationDate),
@@ -883,31 +937,58 @@ function unitUsesGram(unit) {
 async function reduceInventoryAmount({
   userId,
   ingredientId,
+  ingredientName,
   amount,
   unit,
-  prefetchedRows,
 }) {
   const client = ensureSupabase()
   const column = unitUsesGram(unit) ? 'gram' : 'quantity'
   const totalToDeduct = Math.ceil(amount)
   const deductions = []
+  const targetName = normalizeIngredientNameForMatch(ingredientName)
+  const numericIngredientId = Number(ingredientId)
+  const { data: inventoryRows, error: fetchError } = await client
+    .from('inventory')
+    .select(
+      `
+      inventory_id,
+      ingredient_id,
+      quantity,
+      gram,
+      expiration_date,
+      ingredient_management (
+        ingredient_name
+      )
+    `,
+    )
+    .eq('user_id', userId)
+    .order('expiration_date', { ascending: true, nullsFirst: false })
+    .order('created_at', { ascending: true })
 
-  const rows =
-    prefetchedRows ??
-    (await client
-      .from('inventory')
-      .select('inventory_id, quantity, gram, expiration_date')
-      .eq('user_id', userId)
-      .eq('ingredient_id', ingredientId)
-      .order('expiration_date', { ascending: true, nullsFirst: false })
-      .then(({ data, error }) => {
-        if (error) {
-          throw new Error(
-            `Failed to fetch inventory for deduction: ${error.message}`,
-          )
+  if (fetchError) {
+    throw new Error(
+      `Failed to fetch inventory for deduction: ${fetchError.message}`,
+    )
+  }
+
+  const exactRows = (inventoryRows ?? []).filter(
+    (row) => Number(row.ingredient_id) === numericIngredientId,
+  )
+  const exactInventoryIds = new Set(exactRows.map((row) => row.inventory_id))
+  const sameNameRows = targetName
+    ? (inventoryRows ?? []).filter((row) => {
+        if (exactInventoryIds.has(row.inventory_id)) {
+          return false
         }
-        return data
-      }))
+
+        const rowName = normalizeIngredientNameForMatch(
+          row.ingredient_management?.ingredient_name,
+        )
+
+        return rowName === targetName
+      })
+    : []
+  const rows = [...exactRows, ...sameNameRows]
 
   const available = (rows ?? []).reduce(
     (total, row) => total + Math.max(0, Number(row[column] ?? 0)),
@@ -916,8 +997,9 @@ async function reduceInventoryAmount({
 
   if (available < totalToDeduct) {
     const shortage = totalToDeduct - available
+    const label = ingredientName || `ingredient_id=${ingredientId}`
     const err = new Error(
-      `在庫が不足しています: ingredient_id=${ingredientId} ${shortage}${unit}`,
+      `在庫が不足しています: ${label} ${shortage}${unit}`,
     )
     err.statusCode = 400
     throw err
@@ -948,10 +1030,15 @@ async function reduceInventoryAmount({
       const shouldDeleteRow = nextQuantity <= 0 && nextGram <= 0
 
       const mutation = shouldDeleteRow
-        ? client.from('inventory').delete().eq('inventory_id', row.inventory_id)
+        ? client
+            .from('inventory')
+            .delete()
+            .eq('user_id', userId)
+            .eq('inventory_id', row.inventory_id)
         : client
             .from('inventory')
             .update({ [column]: nextAmount })
+            .eq('user_id', userId)
             .eq('inventory_id', row.inventory_id)
 
       const { error: updateError } = await mutation
@@ -1020,33 +1107,13 @@ export async function markRecipeCooked({
     throw new Error(`Failed to fetch recipe ingredients: ${error.message}`)
   }
 
-  const ingredientIds = (recipeIngredients ?? [])
-    .map((ingredient) => ingredient.ingredient_id)
-    .filter(Boolean)
-
-  const { data: allInventoryRows, error: inventoryFetchError } = await client
-    .from('inventory')
-    .select('inventory_id, ingredient_id, quantity, gram, expiration_date')
-    .eq('user_id', userId)
-    .in('ingredient_id', ingredientIds)
-    .order('expiration_date', { ascending: true, nullsFirst: false })
-
-  if (inventoryFetchError) {
-    throw new Error(
-      `Failed to fetch inventory for deduction: ${inventoryFetchError.message}`,
-    )
-  }
-
-  const inventoryRowsByIngredient = new Map()
-  for (const row of allInventoryRows ?? []) {
-    const list = inventoryRowsByIngredient.get(row.ingredient_id) ?? []
-    list.push(row)
-    inventoryRowsByIngredient.set(row.ingredient_id, list)
-  }
-
   const results = []
 
   for (const ingredient of recipeIngredients ?? []) {
+    if (Number(ingredient.ingredient_id) <= 0) {
+      continue
+    }
+
     const amount = Number(ingredient.required_amount ?? 0) * servingCount
 
     if (amount <= 0) {
@@ -1057,9 +1124,9 @@ export async function markRecipeCooked({
       await reduceInventoryAmount({
         userId,
         ingredientId: ingredient.ingredient_id,
+        ingredientName: ingredient.ingredient_management?.ingredient_name,
         amount,
         unit: ingredient.unit ?? '',
-        prefetchedRows: inventoryRowsByIngredient.get(ingredient.ingredient_id),
       }),
     )
   }

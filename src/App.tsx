@@ -326,11 +326,31 @@ function createOAuthSessionOnce(
   return ref.current.promise
 }
 
+function inferReceiptCandidateCategory(name: string) {
+  if (/(小松菜|玉ねぎ|玉葱|キャベツ|にんじん|人参|じゃがいも|トマト|野菜|ねぎ|白菜|大根|ピーマン|きのこ|しめじ|えのき|しいたけ)/u.test(name)) {
+    return '野菜'
+  }
+
+  if (/(鮭|サーモン|魚|さば|鯖|さんま|まぐろ|刺身|豚|鶏|牛|肉|卵|玉子|たまご|ハム|ベーコン|ウインナー|ソーセージ)/u.test(name)) {
+    return '肉・卵・魚'
+  }
+
+  if (/(牛乳|チーズ|ヨーグルト|バター|乳)/u.test(name)) {
+    return '乳製品'
+  }
+
+  if (/(納豆|豆腐|ちくわ|缶|冷凍|惣菜|加工|米|白米|パン|麺|うどん|そば|パスタ)/u.test(name)) {
+    return '加工品'
+  }
+
+  return 'その他'
+}
+
 function namesToReceiptCandidates(names: string[]): ReceiptIngredientCandidate[] {
   return names.map((name, index) => ({
     id: `manual-${index}`,
     name,
-    category: 'その他',
+    category: inferReceiptCandidateCategory(name),
     quantity: 1,
     gram: null,
     selected: true,

@@ -984,7 +984,13 @@ button:disabled {
   gap: 12px;
 }
 
-.recipe-card__header .small-button {
+.recipe-card__actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 14px;
+}
+
+.recipe-card__actions .small-button {
   flex: 0 0 auto;
 }
 

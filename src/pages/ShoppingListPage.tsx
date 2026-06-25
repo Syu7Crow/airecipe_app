@@ -57,11 +57,11 @@ const emptyManualShoppingForm: ManualShoppingForm = {
   memo: '',
 }
 
-const CATEGORY_OTHER = 'other'
-const CATEGORY_MEAT_EGG_FISH = 'meatEggFish'
-const CATEGORY_VEGETABLE = 'vegetable'
-const CATEGORY_DAIRY = 'dairy'
-const CATEGORY_PROCESSED = 'processed'
+const CATEGORY_OTHER = 'その他'
+const CATEGORY_MEAT_EGG_FISH = '肉・卵・魚'
+const CATEGORY_VEGETABLE = '野菜'
+const CATEGORY_DAIRY = '乳製品'
+const CATEGORY_PROCESSED = '加工品'
 
 const recipePageSize = 10
 
@@ -72,6 +72,8 @@ const categoryWords = {
     '豚',
     '牛',
     '魚',
+    '鮭',
+    'サーモン',
     '卵',
     'たまご',
     'ハム',
@@ -86,12 +88,16 @@ const categoryWords = {
     '野菜',
     '玉ねぎ',
     '玉葱',
+    '小松菜',
     'にんじん',
     '人参',
     'キャベツ',
     'レタス',
     'トマト',
     'きのこ',
+    'しめじ',
+    'えのき',
+    'しいたけ',
     'ねぎ',
     'じゃがいも',
     'ピーマン',
@@ -110,6 +116,7 @@ const categoryWords = {
   [CATEGORY_PROCESSED]: [
     '加工',
     '米',
+    '白米',
     'パン',
     'パスタ',
     '麺',

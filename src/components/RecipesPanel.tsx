@@ -71,18 +71,6 @@ export const RecipesPanel = memo(function RecipesPanel({
             >
               <div className="recipe-card__header">
                 <h3>{recipe.name}</h3>
-                {recipe.recipeId && onCookRecipe ? (
-                  <button
-                    type="button"
-                    className="small-button"
-                    onClick={(event) => {
-                      event.stopPropagation()
-                      onCookRecipe(recipe)
-                    }}
-                  >
-                    {t('home.recipes.cooked')}
-                  </button>
-                ) : null}
               </div>
               <p>{recipe.meta}</p>
               {recipe.ingredients?.length ? (
@@ -108,6 +96,20 @@ export const RecipesPanel = memo(function RecipesPanel({
                   <span key={tag}>{tag}</span>
                 ))}
               </div>
+              {recipe.recipeId && onCookRecipe ? (
+                <div className="recipe-card__actions">
+                  <button
+                    type="button"
+                    className="small-button"
+                    onClick={(event) => {
+                      event.stopPropagation()
+                      onCookRecipe(recipe)
+                    }}
+                  >
+                    {t('home.recipes.cooked')}
+                  </button>
+                </div>
+              ) : null}
             </article>
           ))
         ) : isLoading ? (

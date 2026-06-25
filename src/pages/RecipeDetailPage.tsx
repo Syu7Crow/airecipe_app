@@ -121,6 +121,7 @@ export function RecipeDetailPage({
       onInventoryUpdated?.(result.inventory)
       setMessage(t('recipe.inventoryUpdated', { servings }))
       setIsCooking(false)
+      onBack()
     } catch (error) {
       console.error('[vite] Cooking update failed:', error)
       setMessage(t('recipe.inventoryUpdateFailed'))

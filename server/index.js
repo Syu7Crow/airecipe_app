@@ -832,7 +832,7 @@ async function handleUserFridge(userId, response) {
     const ingredients = inventory.map((item, index) => ({
       ingredient_id: item.inventoryId ?? item.ingredientId ?? index + 1,
       ingredient_name: item.name,
-      category: item.category ?? 'other',
+      category: item.category ?? 'その他',
       amount: item.amount,
       is_opened: false,
       best_before_date: null,

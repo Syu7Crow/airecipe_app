@@ -376,6 +376,7 @@ export function HomePage({
         language,
       )
       setIngredients(result.inventory)
+      setCache(`inventory:${language}`, result.inventory)
       setStatusMessage(t('home.status.cookingUpdated', { servings }))
       setCookingRecipe(null)
       setIsCooking(false)

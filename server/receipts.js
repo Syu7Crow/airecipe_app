@@ -41,6 +41,7 @@ function addDaysIsoDate(days) {
 
 const validCategories = new Set([
   '野菜',
+  '肉・卵・魚',
   '肉',
   '魚',
   '卵',
@@ -74,6 +75,26 @@ const nameCorrections = [
 ]
 
 function inferCategory(name, category) {
+  if (category === '肉' || category === '魚' || category === '卵') {
+    return '肉・卵・魚'
+  }
+
+  if (
+    category === 'meatEggFish' ||
+    category === 'vegetable' ||
+    category === 'dairy' ||
+    category === 'processed' ||
+    category === 'other'
+  ) {
+    return {
+      meatEggFish: '肉・卵・魚',
+      vegetable: '野菜',
+      dairy: '乳製品',
+      processed: '加工品',
+      other: 'その他',
+    }[category]
+  }
+
   if (validCategories.has(category)) {
     return category
   }
@@ -83,15 +104,15 @@ function inferCategory(name, category) {
   }
 
   if (/(鮭|サーモン|魚|さば|鯖|さんま|まぐろ|刺身)/u.test(name)) {
-    return '魚'
+    return '肉・卵・魚'
   }
 
   if (/(豚|鶏|牛肉|肉|ハム|ベーコン|ウインナー)/u.test(name)) {
-    return '肉'
+    return '肉・卵・魚'
   }
 
   if (/(卵|玉子|たまご)/u.test(name)) {
-    return '卵'
+    return '肉・卵・魚'
   }
 
   if (/(牛乳|チーズ|ヨーグルト|乳)/u.test(name)) {
@@ -350,6 +371,7 @@ function fallbackExpirationDate(item) {
   }
 
   const categoryDays = {
+    '肉・卵・魚': 3,
     野菜: 5,
     肉: 2,
     魚: 1,
@@ -492,7 +514,7 @@ export async function importReceiptItemsDetail({
     return {
       user_id: userId,
       ingredient_name: item.name,
-      category: item.category,
+      category: inferCategory(item.name, item.category),
       barcode: `receipt-${timestamp}-${index}`,
       amount: amountStr,
       is_opened: false,
@@ -561,4 +583,3 @@ export async function importReceiptItemsDetail({
     imported,
   }
 }
-
