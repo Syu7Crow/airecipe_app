@@ -3810,7 +3810,9 @@ button:disabled {
   }
 
   .fridge-summary {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+    margin-bottom: 24px;
   }
 
   .fridge-table th,
@@ -4714,6 +4716,170 @@ button:disabled {
   color: var(--muted);
   font-size: 13px;
 }
+<<<<<<< HEAD
+/* ==========================================================================
+   最下部追記用：PC・スマホの完全な表示分離とハンバーガー内集約設定
+   ========================================================================== */
+
+/* 🖥️ 【PC・タブレット表示：701px以上】のコントロール */
+@media (min-width: 701px) {
+  /* 🎯 中央のナビ内に追加された「スマホ専用の設定・ログアウト」をPC上では完全に非表示 */
+  .topbar__nav .topbar__nav-extra-link {
+    display: none !important;
+  }
+
+  /* 右側の元のアカウントボタン（背景黒・文字あり）を美しく常時表示 */
+  .account-button {
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+    background-color: #000000 !important; /* 背景は黒 */
+    color: #ffffff !important;            /* 文字は白 */
+    border: none !important;
+    padding: 8px 16px !important;
+    border-radius: 6px !important;
+    font-size: 14px !important;
+    font-weight: 500 !important;
+    cursor: pointer !important;
+  }
+
+  /* PCでは右側のハンバーガーボタンを絶対に隠す */
+  .hamburger-button {
+    display: none !important;
+  }
+
+  /* 中央のナビメニューをいつもの綺麗な一行横並びスタイルに強制リセット */
+  .topbar__nav {
+    display: flex !important;
+    position: static !important;
+    width: auto !important;
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    flex-direction: row !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+    transform: none !important;
+    padding: 0 !important;
+  }
+
+  .topbar__nav a {
+    display: inline-flex !important;
+    width: auto !important;
+    padding: 10px 16px !important;
+    border-radius: 20px !important;
+  }
+}
+
+/* 📱 【スマホ表示：700px以下】のコントロール */
+@media (max-width: 700px) {
+  .topbar {
+    grid-template-columns: 1fr auto !important;
+  }
+
+  .topbar__actions {
+    display: flex !important;
+    align-items: center !important;
+    gap: 10px !important;
+  }
+
+  /* スマホの時は、右側にあったPC用の背景黒ボタン（.account-button）をきれいに消去 */
+  .account-button {
+    display: none !important;
+  }
+
+  /* ハンバーガーボタン（三本線）を出現させる */
+  .hamburger-button {
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: space-between !important;
+    width: 42px !important;
+    height: 42px !important;
+    padding: 13px 11px !important;
+    background: #fff !important;
+    border: 1px solid var(--line) !important;
+    border-radius: 8px !important;
+    cursor: pointer !important;
+    box-sizing: border-box !important;
+    flex-shrink: 0 !important;
+  }
+
+  .hamburger-button span {
+    display: block !important;
+    width: 100% !important;
+    height: 2px !important;
+    background-color: var(--ink) !important;
+    border-radius: 2px !important;
+  }
+
+  /* 4つのナビ（.topbar__nav）をスマホ時のみ縦並びポップオーバーへ変形 */
+  .topbar__nav {
+    display: flex !important;
+    flex-direction: column !important;
+    position: absolute !important;
+    top: calc(100% - 4px) !important;
+    right: clamp(16px, 4vw, 56px) !important;
+    width: 200px !important;
+    background: #ffffff !important;
+    border: 1px solid var(--line) !important;
+    border-radius: 12px !important;
+    padding: 6px !important;
+    box-shadow: var(--shadow-soft) !important;
+    gap: 2px !important;
+    z-index: 999 !important;
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-8px);
+  }
+
+  /* スマホでハンバーガーメニューが開いた時 */
+  .topbar__nav.is-open {
+    opacity: 1 !important;
+    visibility: visible !important;
+    transform: translateY(0) !important;
+  }
+
+  /* スマホメニューが開いた時だけ、中央に隠していた「設定・ログアウト」を縦並びメニュー内に結合表示 */
+  .topbar__nav.is-open .topbar__nav-extra-link {
+    display: flex !important;
+  }
+
+  /* メニュー内のすべてのリンク（ナビ4つ＋設定＋ログアウト）を縦並び用に最適化 */
+  .topbar__nav a {
+    display: flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    box-sizing: border-box !important;
+    padding: 12px 16px !important;
+    border-radius: 8px !important;
+    font-size: 14px !important;
+    color: var(--ink) !important;
+    text-decoration: none !important;
+    text-align: left !important;
+    background: transparent !important;
+  }
+
+  /* メニュー内アイテムのホバー効果 */
+  .topbar__nav a:hover,
+  .topbar__nav a:active {
+    background-color: var(--surface-soft) !important;
+  }
+
+  /* メニュー内の仕切り線（設定ボタンのすぐ上） */
+  .topbar__nav-settings-item {
+    border-top: 1px solid var(--line) !important;
+    margin-top: 4px !important;
+    padding-top: 12px !important;
+    border-radius: 0 !important;
+  }
+
+  .topbar__nav-logout-item {
+    border-radius: 0 0 8px 8px !important;
+  }
+}
+=======
 
 /* Expired row and badge styles */
 .fridge-table tr.expired-row {
@@ -4769,3 +4935,4 @@ button:disabled {
 .summary-card.clickable:active {
   transform: scale(0.995);
 }
+>>>>>>> 136e21c73542a19d8d485573298b7aa5727f7ee0
