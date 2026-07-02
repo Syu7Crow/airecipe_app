@@ -264,6 +264,7 @@ export function ShoppingListPage({ onNavigate }: ShoppingListPageProps) {
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
   const [isImporting, setIsImporting] = useState(false)
+  const [isCurrentListDialogOpen, setIsCurrentListDialogOpen] = useState(false)
   const [isSavedListDialogOpen, setIsSavedListDialogOpen] = useState(false)
   const [selectedSavedList, setSelectedSavedList] = useState<ShoppingList | null>(
     null,
@@ -464,7 +465,7 @@ export function ShoppingListPage({ onNavigate }: ShoppingListPageProps) {
         ? '保存済み'
         : '未保存'
   const currentListHelpText = items.length
-    ? 'チェックした項目は「購入済みを食品一覧に登録」で食品一覧へ追加できます。'
+    ? '内容を確認から購入チェックや削除ができます。'
     : '下のフォームかレシピから、買うものを追加できます。'
 
   function updateSavedListSummary(shoppingList: ShoppingList) {
@@ -872,14 +873,6 @@ export function ShoppingListPage({ onNavigate }: ShoppingListPageProps) {
             >
               新規リスト
             </button>
-            <button
-              type="button"
-              className="primary-button"
-              disabled={isImporting || checkedCount === 0}
-              onClick={() => void handleImportPurchased()}
-            >
-              {isImporting ? '登録中...' : '購入済みを食品一覧に登録'}
-            </button>
           </div>
         </div>
 
@@ -893,76 +886,141 @@ export function ShoppingListPage({ onNavigate }: ShoppingListPageProps) {
           />
         </label>
 
-        {items.length === 0 ? (
-          <div className="fridge-error">
-            <p>{t('shopping.empty')}</p>
-          </div>
-        ) : (
-          <div className="fridge-tables">
-            {categories.map((category) => {
-              const groupItems = groupedItems[category] ?? []
-              return (
-                <div key={category} className="category-table-wrapper">
-                  <h3 className="category-title">{getCategoryLabel(category)}</h3>
-                  <div className="table-container">
-                    <table className="fridge-table shopping-table">
-                      <thead>
-                        <tr>
-                          <th>購入</th>
-                          <th>{t('fridge.table.ingredient')}</th>
-                          <th>量</th>
-                          <th>{t('fridge.table.memo')}</th>
-                          <th>{t('fridge.table.actions')}</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {groupItems.map((item) => (
-                          <tr key={item.itemId ?? item.name}>
-                            <td>
-                              <input
-                                type="checkbox"
-                                checked={item.checked}
-                                onChange={() => handleToggleItem(item.itemId)}
-                                aria-label={`${item.name}を購入済みにする`}
-                              />
-                            </td>
-                            <td className="ingredient-name-cell">
-                              <span className="ingredient-name">{item.name}</span>
-                            </td>
-                            <td>{formatItemAmount(item)}</td>
-                            <td className="shopping-table__memo">
-                              {item.memo || '-'}
-                            </td>
-                            <td>
-                              <button
-                                type="button"
-                                className="secondary-button shopping-item-delete-button"
-                                onClick={() => handleRemoveItem(item.itemId)}
-                              >
-                                {t('shopping.deleteBtn')}
-                              </button>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              )
-            })}
-            <div className="shopping-current-footer">
+        <div className="shopping-current-summary">
+          {items.length === 0 ? (
+            <div>
+              <strong>買うものはまだありません</strong>
+              <span>
+                レシピから不足分を追加するか、手入力で買うものを追加してください。
+              </span>
+            </div>
+          ) : (
+            <div>
+              <strong>{items.length}件の買うものがあります</strong>
+              <span>
+                購入チェックや削除は「内容を確認」から操作できます。
+              </span>
+            </div>
+          )}
+          <button
+            type="button"
+            className="secondary-button"
+            onClick={() => setIsCurrentListDialogOpen(true)}
+            disabled={items.length === 0}
+          >
+            内容を確認
+          </button>
+        </div>
+      </section>
+
+      {isCurrentListDialogOpen ? (
+        <div
+          className="modal-backdrop"
+          role="presentation"
+          onClick={() => setIsCurrentListDialogOpen(false)}
+        >
+          <section
+            className="cook-modal shopping-current-dialog"
+            aria-labelledby="shopping-current-dialog-title"
+            aria-modal="true"
+            role="dialog"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="section-heading shopping-list-heading">
+              <div>
+                <p className="eyebrow">編集中の買い物</p>
+                <h2 id="shopping-current-dialog-title">
+                  {currentListDisplayName}
+                </h2>
+                <p className="settings-section__description">
+                  購入済みにしたものだけ食品一覧へ登録できます。
+                </p>
+              </div>
               <button
                 type="button"
-                className="primary-button"
-                disabled={isImporting || checkedCount === 0}
-                onClick={() => void handleImportPurchased()}
+                className="secondary-button"
+                onClick={() => setIsCurrentListDialogOpen(false)}
               >
-                {isImporting ? '登録中...' : '購入済みを食品一覧に登録'}
+                {t('common.close')}
               </button>
             </div>
-          </div>
-        )}
-      </section>
+
+            {items.length === 0 ? (
+              <div className="fridge-error">
+                <p>{t('shopping.empty')}</p>
+              </div>
+            ) : (
+              <div className="fridge-tables">
+                {categories.map((category) => {
+                  const groupItems = groupedItems[category] ?? []
+                  return (
+                    <div key={category} className="category-table-wrapper">
+                      <h3 className="category-title">
+                        {getCategoryLabel(category)}
+                      </h3>
+                      <div className="table-container">
+                        <table className="fridge-table shopping-table">
+                          <thead>
+                            <tr>
+                              <th>購入</th>
+                              <th>{t('fridge.table.ingredient')}</th>
+                              <th>量</th>
+                              <th>{t('fridge.table.memo')}</th>
+                              <th>{t('fridge.table.actions')}</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {groupItems.map((item) => (
+                              <tr key={item.itemId ?? item.name}>
+                                <td>
+                                  <input
+                                    type="checkbox"
+                                    checked={item.checked}
+                                    onChange={() => handleToggleItem(item.itemId)}
+                                    aria-label={`${item.name}を購入済みにする`}
+                                  />
+                                </td>
+                                <td className="ingredient-name-cell">
+                                  <span className="ingredient-name">
+                                    {item.name}
+                                  </span>
+                                </td>
+                                <td>{formatItemAmount(item)}</td>
+                                <td className="shopping-table__memo">
+                                  {item.memo || '-'}
+                                </td>
+                                <td>
+                                  <button
+                                    type="button"
+                                    className="secondary-button shopping-item-delete-button"
+                                    onClick={() => handleRemoveItem(item.itemId)}
+                                  >
+                                    {t('shopping.deleteBtn')}
+                                  </button>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )
+                })}
+                <div className="shopping-current-footer">
+                  <button
+                    type="button"
+                    className="primary-button"
+                    disabled={isImporting || checkedCount === 0}
+                    onClick={() => void handleImportPurchased()}
+                  >
+                    {isImporting ? '登録中...' : '購入済みを食品一覧に登録'}
+                  </button>
+                </div>
+              </div>
+            )}
+          </section>
+        </div>
+      ) : null}
 
       <section className="shopping-panel shopping-recipe-panel">
         <div className="section-heading shopping-list-heading">
