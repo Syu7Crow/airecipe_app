@@ -3472,6 +3472,20 @@ button:disabled {
   font-weight: 700;
 }
 
+.shopping-saved-detail__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.shopping-saved-detail__actions .primary-button,
+.shopping-saved-detail__actions .secondary-button {
+  min-height: 38px;
+  padding: 0 14px;
+  font-size: 13px;
+}
+
 .shopping-saved-detail__items {
   display: grid;
   gap: 8px;
@@ -3593,7 +3607,7 @@ button:disabled {
 .shopping-saved-dialog {
   display: grid;
   gap: 16px;
-  width: min(560px, 100%);
+  width: min(680px, 100%);
   max-height: min(680px, calc(100vh - 48px));
   overflow: auto;
 }
@@ -3663,6 +3677,12 @@ button:disabled {
   .shopping-saved-detail .section-heading {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .shopping-saved-detail__actions,
+  .shopping-saved-detail__actions .primary-button,
+  .shopping-saved-detail__actions .secondary-button {
+    width: 100%;
   }
 }
 
